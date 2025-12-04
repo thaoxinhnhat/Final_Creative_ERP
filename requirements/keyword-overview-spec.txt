@@ -1,0 +1,58 @@
+feature: Update Keyword Overview UI
+context: |
+  Trong tab "Keyword", khi user chọn sub-tab **Keyword Overview**,
+  cần hiển thị biểu đồ stacked area thể hiện phân bố số lượng keywords theo nhóm rank qua thời gian,
+  và bên dưới là bảng chi tiết từng keyword. Toàn bộ dữ liệu lấy từ **Global Filter Bar** của tab Keyword
+  (Date Range, Country, Device/OS, Min Traffic, Keywords, Granularity). Không lặp lại app header hay filter trong section.
+
+requirements:
+  # A) CHART (trên)
+  - Render một **stacked area chart** với các yêu cầu:
+    - Title: "Keyword Overview – All Keywords"
+    - Subtitle (nếu cần): "{Store} • {dateRange} • {country}"
+    - X-axis: timeline theo Date Range (tôn trọng granularity: Auto/Day/Week/Month)
+    - Y-axis: "Number of Keywords"
+    - Series (legend nằm dưới chart): các bucket rank
+      * "1–2", "3–5", "6–10", "11–20", "21+"
+    - Mỗi bucket là một lớp (area) khác màu, chồng (stacked) lên nhau.
+    - Control "Plot Type" ở góc phải chart: dropdown ["Stacked","Line"] (mặc định "Stacked")
+      * Nếu chuyển "Line", hiển thị 5 đường tương ứng 5 bucket, không chồng lớp.
+    - Tooltip khi hover hiển thị: date + số lượng keywords cho từng bucket.
+    - Chart phải **đồng bộ** theo Global Filter Bar (Date Range, Country, Device/OS, Min Traffic, Keywords).
+
+  # B) BẢNG (dưới)
+  - Bảng dữ liệu "Keyword list" đặt ngay dưới chart với các cột:
+    * Search Term
+    * Traffic
+    * Phone Difficulty
+    * Phone Apps  (hiển thị dạng số, cho phép hiển thị "240+")
+    * Phone Rank  (hỗ trợ hiển thị up/down indicator màu xanh/đỏ)
+    * Density     (phần trăm, ###.#%)
+  - Thanh action bên phải header bảng:
+    * Button "Add Keywords"
+    * Button "Download CSV"
+  - Bên trái header bảng có dropdown "All Keywords" (giữ nguyên hành vi hiện có nếu đã có).
+  - Bảng hỗ trợ sort theo từng cột (như Traffic, Difficulty, Rank…).
+  - Bảng và Chart **đọc chung state** từ Global Filter Bar; không render “Active Filters” lặp lại.
+
+empty_states:
+  - Nếu không có dữ liệu theo filter:
+    * Chart: hiển thị khung rỗng + text "No data for the current filters."
+    * Table: hiển thị header cột nhưng 0 rows + text "No rows for the current filters."
+    * Ở trên cùng tab Keyword nếu tất cả section đều rỗng đã có banner chung: "The selected filters returned no data."
+
+loading:
+  - Khi thay đổi Global Filter Bar, chart và table trong Keyword Overview hiển thị skeleton 300–500ms rồi render.
+
+rules:
+  - Không lặp lại app info hoặc filter trong section.
+  - Sử dụng **duy nhất** Global Filter Bar ở đầu tab Keyword làm nguồn state.
+  - Giữ nguyên theme/style/spacing hiện có; responsive tốt trên desktop/laptop.
+  - Các số lớn trong bảng có thể dùng format rút gọn nếu hệ thống đã có util (K/M), còn không giữ nguyên.
+
+acceptance_criteria:
+  - Sub-tab **Keyword Overview** hiển thị đúng bố cục: trên là stacked area chart, dưới là bảng keyword.
+  - Dropdown **Plot Type** ở góc phải chart hoạt động (Stacked/Line).
+  - Chart + Table phản hồi đúng theo Global Filter Bar (Date Range, Country, Device/OS, Min Traffic, Keywords, Granularity).
+  - Empty state, loading state hiển thị đúng mô tả.
+  - Không có filter/active filters lặp lại trong section.

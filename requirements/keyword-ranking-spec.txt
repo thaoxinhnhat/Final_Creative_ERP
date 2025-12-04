@@ -1,0 +1,30 @@
+ update the ASO Overview - requirements: Ở tab "Keyword", khi user chọn sub-tab **Keyword Ranking** 
+requirements:
+- Dưới filter bar sẽ hiển thị layout **2 phần**:
+
+    (A) Biểu đồ line chart ranking over time:
+      - Trục X: timeline theo Date Range.
+      - Trục Y: Rank position (Rank 1 ở trên cùng → càng xuống dưới rank càng cao số).
+      - Nhiều line chart cho từng keyword/app được chọn, mỗi line có màu riêng.
+      - Tích hợp legend và toggle on/off keywords/apps.
+      - Bên phải có box “Top Apps for [category/keyword]”: list top 10 apps (hiển thị icon app, name, rating, price).
+
+    (B) Bảng dữ liệu từ khóa (keyword table):
+      - Cột "Search Term": tên keyword.
+      - Cột "Traffic": traffic score.
+      - Cột "Phone Difficulty": difficulty score.
+      - Cột "Phone Apps": số lượng apps cạnh tranh (vd: 240+).
+      - Cột "Phone Rank": rank hiện tại của app (highlight màu xanh khi tăng, đỏ khi giảm).
+      - Cột "Density": % density keyword.
+      - Cột "Downloads": số download ước tính (hiển thị kèm % share).
+      - Cột cuối: icon để xóa keyword.
+      - Trên bảng có search box “Filter keywords”.
+
+  - Bảng và biểu đồ phải đồng bộ với filter (Date Range, Country, Device).
+  - Nếu không có dữ liệu theo filter, hiển thị bảng trống + thông báo: 
+    `"The selected filters returned no data."`
+
+acceptance_criteria:
+  - Keyword Ranking sub-tab hiển thị đúng bố cục: trên là chart, dưới là bảng keyword.
+  - Filter bar chỉ hiển thị 1 lần ở trên cùng.  - Chart line và bảng data cập nhật đồng bộ theo filter
+  - Top Apps list hiển thị bên phải chart (không trùng với bảng keyword).

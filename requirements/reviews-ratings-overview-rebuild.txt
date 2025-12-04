@@ -1,0 +1,67 @@
+Goal:
+Rebuild the “Reviews & Ratings” Overview so it includes 2 main charts and a full breakdown section, while keeping Google Play Console logic.
+
+Keep:
+- Current theme, spacing, shadows, and filter logic.
+- Data sources and CSV export hooks.
+
+Global filters (fixed, sticky at the top):
+- App (required) · OS (Android/iOS) · Time range (Last 7/30/90/180/365 days + custom) · Country/Region (Global + multi-select).
+- If no App is selected, render an empty state with instructions.
+
+KPI strip (4 cards):
+- Avg Rating (for selected range), delta vs previous range.
+- Total Ratings (K/M formatting).
+- Ratings with Reviews.
+- Response Rate (or “N/A” if not available).
+
+Row A – Two side-by-side charts (each 50% width on desktop, full width on mobile):
+1) Chart A1: “Average Rating Over Time”
+   - Line chart.
+   - Y axis: 0–5 (0.5 step). X axis: time based on filters.
+   - Series: “Your daily average”; optional overlay “Peers’ median” (toggle in legend).
+   - Controls (top-right of card): Granularity (Daily/Weekly/Monthly), Compare to previous (toggle), Export CSV.
+   - Tooltip: date, average rating (1 decimal).
+
+2) Chart A2: “Rating Contribution Over Time”
+   - Stacked area (or stacked bar).
+   - Y axis: number of ratings; X axis: same granularity as A1.
+   - Series: 1★, 2★, 3★, 4★, 5★ with fixed colors.
+   - Tooltip: show absolute count and percentage per star.
+   - Legend toggles per-star; Export CSV.
+
+Row B – “Rating Distribution Over Time”
+- Stacked columns per period (monthly by default).
+- Uses same star colors as A2.
+- Tooltip shows total + per-star counts and percentages.
+- Export CSV.
+
+Row C – “Sentiment Trend”
+- Line chart with Positive / Neutral / Negative (% of text reviews).
+- If no review text in range → show “N/A” with info tooltip.
+- Export CSV.
+
+Row D – “Rating Breakdown” (two-column responsive grid of cards):
+- Cards, each with sortable table and pagination:
+  1) Country/Region
+  2) Language
+  3) App Version
+  4) OS Version (Android/iOS)
+  5) Form Factor
+  6) Device (model)
+  7) Carrier
+- Columns: {Dimension} | Number of ratings | Average rating | Explore →
+- Default sort: Number of ratings (desc). Secondary sort: Avg rating (desc).
+- Export CSV button per card.
+- Collapse/expand per card; remember state.
+
+Formatting rules:
+- Compact numbers: 1,500,000 → 1.5M; 20,000 → 20K; keep absolute numbers in tooltips.
+- Maintain the same color palette for star ratings across all charts (1★→5★).
+- Respect current loading skeletons and empty states.
+
+Acceptance:
+- The page shows, in order:
+  Filters → KPI strip → Row A (Average Rating Over Time, Rating Contribution Over Time) → Row B (Rating Distribution Over Time) → Row C (Sentiment Trend) → Row D (Rating Breakdown).
+- Changing App/OS/Time/Country updates every widget consistently.
+- If filters produce no data, show the unified empty state and a “Reset filters” action.

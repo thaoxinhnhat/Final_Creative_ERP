@@ -1,0 +1,75 @@
+## Module: Reviews & Ratings (UI Redesign)
+
+### Cấu trúc UI
+
+#### (A) Header Section
+- Thanh filter cố định: Date Range | Country | OS | Device | App Version.
+- KPI Cards (grid 4 ô):
+  1. ⭐️ Average Rating (so với kỳ trước, có delta ↑↓)
+  2. 👥 Total Ratings
+  3. 📝 Total Reviews (reviews có text)
+  4. 🙂 Sentiment Breakdown (% Positive / Neutral / Negative với badge màu)
+
+---
+
+#### (B) Rating Distribution & Sentiment Trend
+- **Rating Distribution Over Time**
+  - Biểu đồ stacked bar (1★ đến 5★).
+  - Toggle chọn: Daily / Weekly / Monthly.
+  - Tooltip hiển thị số lượt + %.
+
+- **Sentiment Trend**
+  - Line chart: Positive %, Neutral %, Negative % theo thời gian.
+  - Toggle so sánh với Peers Median (nếu có dữ liệu benchmark).
+
+---
+
+#### (C) Performance Over Time
+- Line chart theo Average Rating.
+- 2 đường:
+  1. App Rating
+  2. Peer Median (có nút bật/tắt hiển thị).
+- Tooltip: hiển thị giá trị + chênh lệch.
+
+---
+
+#### (D) Ratings Breakdown (Accordion Cards)
+Hiển thị phân tích theo nhiều chiều dữ liệu. Mỗi chiều là **1 card accordion collapsible**:
+1. 🌍 By Country / Region
+2. 🌐 By Language
+3. ⚙️ By App Version & OS Version
+4. 📱 By Device & Carrier  
+
+- Mỗi card hiển thị bảng sortable + mini chart (pie hoặc bar ngang).
+- Footer mỗi card có nút **Explore →** để xem chi tiết.
+
+---
+
+#### (E) Reviews Feed
+- Danh sách review chi tiết:
+  - Avatar + User Name + Country flag
+  - ⭐️ Rating + Ngày giờ
+  - Metadata: Device, OS, Version, Language
+  - Nội dung review (dịch + bản gốc → expandable).
+  - Action: 👍 Helpful | 👎 Not Helpful | 💬 Reply | 🚩 Report
+- Thanh filter nhanh: “Only 1★” | “Only 5★” | “With Text” | “Translated”.
+
+---
+
+#### (F) Extra Insights (tính năng sáng tạo)
+- **Keyword Cloud**: hiển thị từ khóa phổ biến trong review (highlight tích cực/tiêu cực).
+- **AI Review Summary**: Card insight ngắn gọn (VD: “Nhiều user báo crash Android 14”, “Người dùng khen đồ họa”).
+- **Compare Period Toggle**: cho phép so sánh dữ liệu kỳ hiện tại vs kỳ trước (overlay biểu đồ).
+
+---
+
+#### (G) Export & Automation
+- Nút Export: CSV / PDF (góc phải trên).
+- Tùy chọn Auto-report: gửi báo cáo Weekly / Monthly qua email.
+
+---
+
+### Quy tắc UI
+- Giữ nguyên theme, spacing, shadow.
+- Bố cục responsive (3 cột → collapse 1 cột trên mobile).
+- Loading state: skeleton animation khi đổi filter.

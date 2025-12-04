@@ -1,0 +1,70 @@
+import type { AppItem } from "../types"
+
+export const mockApps: AppItem[] = [
+  {
+    id: "app-1",
+    name: "Fashion Show",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "googleplay",
+    platform: "android",
+    bundleOrPackage: "com.fashionshow.app",
+  },
+  {
+    id: "app-2",
+    name: "Style Master",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "appstore",
+    platform: "ios",
+    bundleOrPackage: "com.stylemaster.app",
+  },
+  {
+    id: "app-3",
+    name: "Beauty Hub",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "googleplay",
+    platform: "android",
+    bundleOrPackage: "com.beautyhub.app",
+  },
+  {
+    id: "app-4",
+    name: "Wardrobe Manager",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "appstore",
+    platform: "ios",
+    bundleOrPackage: "com.wardrobemanager.app",
+  },
+  {
+    id: "app-5",
+    name: "Dress Up World",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "googleplay",
+    platform: "android",
+    bundleOrPackage: "com.dressupworld.app",
+  },
+  {
+    id: "app-6",
+    name: "Outfit Planner",
+    iconUrl: "/placeholder.svg?height=40&width=40",
+    store: "appstore",
+    platform: "ios",
+    bundleOrPackage: "com.outfitplanner.app",
+  },
+]
+
+export const countries = [
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "FR", name: "France", flag: "🇫🇷" },
+  { code: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "CN", name: "China", flag: "🇨🇳" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "RU", name: "Russia", flag: "🇷🇺" },
+]

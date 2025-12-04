@@ -1,0 +1,245 @@
+# Module: Reviews & Ratings (ASO)
+# Goal: MỌI dữ liệu trong module hiển thị theo 4 tham số bắt buộc:
+#       app_id (ứng dụng), os (Android|iOS), time_range, region.
+#       Nếu chưa chọn app_id -> hiển thị empty state.
+
+ui:
+  layout:
+    - FixedFilterBar(top, sticky:true)
+    - ContentArea(scroll:true, padding:"24px 16px 48px")
+
+  components:
+    FixedFilterBar:
+      id: rr.filters
+      items:
+        - AppSelector:
+            id: rr.filter.app
+            type: searchable-dropdown
+            required: true
+            placeholder: "Select an app to view Reviews & Ratings"
+            itemTemplate:
+              left: appIcon
+              primary: appName
+              secondary: bundle_or_packageId
+              rightBadge: status  # Draft | Unpublished | Live
+            emptyState: "No apps found"
+        - OSFilter:
+            id: rr.filter.os
+            type: checkbox-group
+            options:
+              - { label: "Android", value: "android", default: true }
+              - { label: "iOS",     value: "ios",     default: false }
+            minSelection: 1   # luôn có ít nhất 1 OS
+        - TimeRange:
+            id: rr.filter.time
+            type: daterange
+            presets: ["Last 7 days","Last 30 days","Last 90 days","YTD","Custom"]
+            default: "Last 30 days"
+            granularity:
+              id: rr.filter.granularity
+              type: segmented
+              options: ["Daily","Weekly","Monthly"]
+              default: "Daily"
+        - RegionFilter:
+            id: rr.filter.region
+            type: multiselect
+            placeholder: "All Countries"
+            showFlag: true
+            allowSelectAll: true
+            default: ["ALL"]
+
+      interactions:
+        - onChange(any):
+            action: rr.actions.refreshAll
+            debounceMs: 250
+
+    ContentArea:
+      id: rr.content
+      sections:
+        - SummaryHeaderKPI:
+            id: rr.header.kpi
+            # 3-4 kpi ở header để context nhanh, TẤT CẢ theo filter hiện tại
+            kpis:
+              - { key:"avg_rating",  label:"Average Rating", icon:"star" }
+              - { key:"total_users", label:"Users",          icon:"users" }
+              - { key:"with_reviews",label:"Ratings w/ Reviews", icon:"message-circle" }
+              - { key:"trend_delta", label:"Change vs prev.",   icon:"trending-up" }
+            loading: skeleton
+            emptyState: depends_on_app
+
+        - Tabs:
+            id: rr.tabs
+            items:
+              - { key:"overview", label:"Overview" }
+              - { key:"ratings",  label:"Ratings" }
+              - { key:"reviews",  label:"Reviews" }
+            default: "overview"
+
+        # === OVERVIEW TAB (tóm tắt) ===
+        - Overview:
+            mountWhen: rr.tabs.active == "overview"
+            blocks:
+              - RatingDistributionChart(stackedBar, timeSeries:true)
+              - SentimentTrend(line)
+              - RecentReviews(list, max:10, replyInline:true)
+            emptyStateRules:
+              - if not rr.filter.app.selected -> show SelectAppEmpty
+
+        # === RATINGS TAB (giống GPC nhưng gọn) ===
+        - Ratings:
+            mountWhen: rr.tabs.active == "ratings"
+            blocks:
+              - PerformanceOverTime(line):
+                  series: ["Your daily average", "Peers' median"]
+                  granularity: rr.filter.granularity
+              - RatingDistribution(stackedBar)
+              - Breakdown(grid):
+                  columnsPerRow: 2
+                  cards:
+                    - { key:"by_country",  title:"Country / region" }
+                    - { key:"by_language", title:"Language" }
+                    - { key:"by_app_version", title:"App version" }
+                    - { key:"by_os_version",  title:"Android/iOS version" }
+                    - { key:"by_form_factor", title:"Form factor" }
+                    - { key:"by_device",      title:"Device" }
+                  cardTable:
+                    columns:
+                      - { key:"label",  title:"Label" }
+                      - { key:"count",  title:"# Ratings" }
+                      - { key:"avg",    title:"Avg rating" }
+                    pagination: true
+            emptyStateRules:
+              - if data.empty -> show "No ratings in selected filters."
+
+        # === REVIEWS TAB (feed + trả lời) ===
+        - Reviews:
+            mountWhen: rr.tabs.active == "reviews"
+            blocks:
+              - ReviewFilters(inline):
+                  items:
+                    - ratingStars(1..5, multi:true)
+                    - withTextOnly(toggle)
+                    - hasReply(toggle)
+                    - sortBy(select: ["Most recent","Highest","Lowest","Most helpful"])
+              - ReviewFeed(listVirtualized):
+                  itemTemplate:
+                    header: avatar + author + date + countryFlag + device + appVersion + osVersion
+                    ratingStars: 1..5
+                    body: reviewText with "Show more"
+                    actions:
+                      - quickTranslate(button)
+                      - copyLink(icon)
+                      - markAsHelpful(toggle)
+                      - reportAbuse(icon)
+                    replyBox:
+                      maxlength: 350
+                      aiAssist(optional): "Suggest reply"
+                      onSubmit: rr.actions.reply(reviewId, text)
+                  emptyState: "No reviews match your filters."
+            emptyStateRules:
+              - if not rr.filter.app.selected -> show SelectAppEmpty
+
+logic:
+  state:
+    rr.filter.app.selected: null | app_id
+    rr.filter.os.selected:  ["android"] | ["ios"] | ["android","ios"]
+    rr.filter.time.range:   { start: ISODate, end: ISODate }
+    rr.filter.granularity:  "daily" | "weekly" | "monthly"
+    rr.filter.region:       ["ALL"] | [country_code,...]
+    cache:
+      key: "rr:{app_id}:{os}:{range}:{granularity}:{region}"
+      ttlSec: 300
+
+  guards:
+    - if rr.filter.app.selected == null:
+        rr.content.show(SelectAppEmpty)
+        preventApiCalls: true
+
+  actions:
+    refreshAll:
+      steps:
+        - buildQueryParams from current filters (see api.contract)
+        - parallelFetch:
+            - GET /rr/summary
+            - GET /rr/overview
+            - GET /rr/ratings/performance
+            - GET /rr/ratings/distribution
+            - GET /rr/ratings/breakdown
+            - GET /rr/reviews/feed
+        - update UI
+      loading:
+        - show skeleton in each block
+      errors:
+        - toast(error.message)
+        - show inline error per block
+
+  formatting:
+    # Dạng hiển thị số ở toàn module (áp dụng KPI & bảng):
+    numbers:
+      compact: true          # 15000000 -> "15M"
+      currency:              # 20000 -> "$20K"
+        symbol: "$"
+        compact: true
+    rating:
+      precision: 1           # 4.3
+    dates:
+      tz: "user"             # dùng timezone user
+      display: "ll"          # e.g. Sep 2, 2025
+
+  emptyStates:
+    SelectAppEmpty:
+      icon: search
+      title: "Select an app to view Reviews & Ratings"
+      subtitle: "Choose an app/game from your portfolio. All metrics will update automatically."
+      cta: focus rr.filter.app
+
+api:
+  baseUrl: /api/aso/rr
+  headers:
+    accept: application/json
+  contract:
+    # TẤT CẢ endpoint đều nhận chung filter param sau:
+    queryParams:
+      app_id: string (required)           # ID nội bộ app
+      os:     string[] (["android"|"ios"])# 1 hoặc 2 giá trị
+      start:  ISODate (inclusive)
+      end:    ISODate (inclusive)
+      granularity: "daily"|"weekly"|"monthly"
+      region: string[] | ["ALL"]          # country codes ISO-2; "ALL" cho toàn cầu
+    # Ví dụ: /summary?app_id=abc&os=android&os=ios&start=2025-09-01&end=2025-09-30&granularity=daily&region=ALL
+
+  endpoints:
+    - GET /summary            -> { avg_rating, total_users, with_reviews, trend_delta }
+    - GET /overview           -> { rating_distribution_ts[], sentiment_ts[], recent_reviews[] }
+    - GET /ratings/performance-> { series:[{name, points:[{t,value}]}] }
+    - GET /ratings/distribution-> { buckets:[{star,count}], timeseries:[...] }
+    - GET /ratings/breakdown  -> { by_country[], by_language[], by_app_version[], by_os_version[], by_form_factor[], by_device[] }
+    - GET /reviews/feed       -> { items:[{id, author, country, device, app_version, os_version, rating, text, created_at, replied, reply_text}], nextCursor? }
+    - POST /reviews/reply     -> body { review_id, reply_text } -> { success:true }
+
+a11y:
+  - keyboardNavigable: true
+  - labelsForInputs: true
+  - highContrastSupport: true
+  - liveRegionForToasts: polite
+
+testing:
+  scenarios:
+    - "No app selected": show SelectAppEmpty, no API calls.
+    - "Android only / US / Last 30 days": data updates đúng cả 3 tab.
+    - "Both OS + Global": gộp dữ liệu 2 nền tảng (series tách màu).
+    - "No data for filters": show table empty + message “No data for selected filters.”
+    - "Change granularity": line charts re-render with correct buckets.
+    - "Caching": same filter within TTL -> served from cache key.
+    - "Reply review success/fail": toast + optimistic UI update.
+
+telemetry:
+  events:
+    - rr_app_selected(app_id)
+    - rr_filters_changed(os,time,region)
+    - rr_tab_view(tab_key)
+    - rr_reply_submitted(review_id, outcome)
+
+security:
+  - sanitizeHTML(review_text, reply_text)
+  - rateLimit POST /reviews/reply (per user)

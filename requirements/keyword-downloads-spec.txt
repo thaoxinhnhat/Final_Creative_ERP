@@ -1,0 +1,55 @@
+feature: Update Keyword Downloads UI
+context: |
+  Trong tab "Keyword", khi user chọn sub-tab **Keyword Downloads**,
+  cần hiển thị biểu đồ phân bổ downloads theo từng keyword qua thời gian và bảng chi tiết bên dưới.
+  Mọi dữ liệu đọc từ **Global Filter Bar** của tab Keyword (Date Range, Country, Device/OS, Min Traffic, Keywords, Granularity).
+  Không lặp lại app header hay filter trong section.
+
+requirements:
+  # A) CHART (trên)
+  - Render **stacked area chart** thể hiện tổng downloads được gán (attributed) cho từng keyword theo thời gian.
+  - Title: "Keyword Downloads – {appName}"
+  - Subtitle: "{Store} • {dateRange} • {country}"
+  - X-axis: timeline (tôn trọng granularity từ Global Filter Bar: Auto/Day/Week/Month)
+  - Y-axis: "Downloads"
+  - Series: mỗi keyword là một lớp (area) với màu riêng; có legend bên dưới chart (scrollable nếu dài).
+  - Control "Plot Type" ở góc phải chart: dropdown ["Stacked","Line"] (mặc định "Stacked").
+  - Tooltip hover: hiển thị date, downloads theo từng keyword, tổng.
+  - Khi không có dữ liệu: hiển thị khung rỗng + text "No data for the current filters."
+
+  # B) THANH ACTION GIỮA
+  - Khối "Untracked Keywords":
+      * Buttons: "Display", "Hide", "Track Keywords" (giữ hành vi hiện có nếu system đã support).
+  - Bên phải có 2 button:
+      * "Manage Keywords" (mở drawer/modal quản lý danh sách keyword)
+      * "Download CSV" (xuất dữ liệu bảng bên dưới)
+
+  # C) BẢNG (dưới)
+  - Bảng chi tiết keyword với các cột:
+      * Search Term
+      * Traffic
+      * Phone Rank      (hỗ trợ arrow ↑/↓ màu xanh/đỏ)
+      * Density         (###.#%)
+      * Downloads       (hiển thị theo format rút gọn K/M; có tooltip số đầy đủ)
+      * Percent         (thanh bar % trên tổng, kèm % text ở đầu cột)
+  - Hàng đầu tiên là **Total** (tổng mọi keyword) — cột Downloads và Percent hiển thị tổng 100%.
+  - Mặc định **sort theo Downloads desc**; cho phép sort các cột khác.
+  - Khi không có dữ liệu: render header cột + state “No rows for the current filters.”
+
+  # D) ĐỊNH DẠNG SỐ & UX
+  - Format số lớn: 1,000→1K; 1,500,000→1.5M (áp dụng cho Downloads, có tooltip số đầy đủ).
+  - Percent = (downloads keyword / tổng downloads) * 100, làm tròn 1 chữ số thập phân.
+  - Giữ skeleton/loading 300–500ms khi thay đổi Global Filter Bar.
+  - Responsive: chart full width, bảng có sticky header; thanh % luôn nhìn thấy khi scroll ngang.
+
+rules:
+  - Section **không** render lại app header hay filter chips; chỉ dùng **Global Filter Bar** của tab Keyword.
+  - Các nút Plot Type, Manage Keywords, Download CSV là control riêng section, không thay đổi filter global.
+  - Giữ theme/style/spacing hiện có; màu series theo palette hiện hành.
+
+acceptance_criteria:
+  - Sub-tab **Keyword Downloads** hiển thị đúng bố cục: trên chart (stacked area), giữa action bar, dưới bảng keyword.
+  - Chart + bảng cập nhật đồng bộ theo Global Filter Bar.
+  - Mặc định sort bảng theo Downloads desc, có hàng Total = 100%.
+  - Empty state & loading state hiển thị đúng mô tả.
+  - Không có filter/active filters lặp lại trong section.
