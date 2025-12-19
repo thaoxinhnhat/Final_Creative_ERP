@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -860,7 +860,7 @@ function AssetsPillCell({ item }: { item: (typeof initialStoreKitItems)[0] }) {
   )
 }
 
-export default function StoreKitManagementPage() {
+function StorekitPageContent() {
   const [storeKitItems, setStoreKitItems] = useState(initialStoreKitItems)
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -1105,10 +1105,10 @@ export default function StoreKitManagementPage() {
       prev.map((i) =>
         i.id === itemToApprove.id
           ? {
-              ...i,
-              status: "aso_testing" as const,
-              updatedDate: currentDateTime,
-            }
+            ...i,
+            status: "aso_testing" as const,
+            updatedDate: currentDateTime,
+          }
           : i,
       ),
     )
@@ -1121,10 +1121,10 @@ export default function StoreKitManagementPage() {
         const updatedItems = parsedItems.map((i: any) =>
           i.id === itemToApprove.id
             ? {
-                ...i,
-                status: "aso_testing",
-                updatedDate: currentDateTime,
-              }
+              ...i,
+              status: "aso_testing",
+              updatedDate: currentDateTime,
+            }
             : i,
         )
         localStorage.setItem("storekit_items", JSON.stringify(updatedItems))
@@ -1133,31 +1133,31 @@ export default function StoreKitManagementPage() {
       console.error("Failed to update localStorage:", error)
     }
 
+    toast({
+      title: "✅ Đã duyệt Design",
+      description: `StoreKit "${itemToApprove.name}" đã được duyệt và chuyển sang trạng thái "ASO Testing".`,
+    })
+
+    setApproveDialogOpen(false)
+    setItemToApprove(null)
+  }
+
+  const handleRejectDesign = (item: (typeof initialStoreKitItems)[0]) => {
+    setItemToReject(item)
+    setRejectDialogOpen(true)
+  }
+
+  const handleConfirmReject = () => {
+    if (!itemToReject) return
+
+    if (!rejectionReason.trim()) {
       toast({
-        title: "✅ Đã duyệt Design",
-        description: `StoreKit "${itemToApprove.name}" đã được duyệt và chuyển sang trạng thái "ASO Testing".`,
+        title: "Thiếu lý do từ chối",
+        description: "Bạn cần nhập lý do từ chối để Design team biết cần chỉnh sửa gì.",
+        variant: "destructive",
       })
-  
-      setApproveDialogOpen(false)
-      setItemToApprove(null)
+      return
     }
-  
-    const handleRejectDesign = (item: (typeof initialStoreKitItems)[0]) => {
-      setItemToReject(item)
-      setRejectDialogOpen(true)
-    }
-  
-    const handleConfirmReject = () => {
-      if (!itemToReject) return
-  
-      if (!rejectionReason.trim()) {
-        toast({
-          title: "Thiếu lý do từ chối",
-          description: "Bạn cần nhập lý do từ chối để Design team biết cần chỉnh sửa gì.",
-          variant: "destructive",
-        })
-        return
-      }
 
     const now = new Date()
     const currentDateTime = `${now.toISOString().split("T")[0]} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`
@@ -1167,11 +1167,11 @@ export default function StoreKitManagementPage() {
       prev.map((i) =>
         i.id === itemToReject.id
           ? {
-              ...i,
-              status: "need_redesign" as const,
-              updatedDate: currentDateTime,
-              rejectionReason: rejectionReason.trim(),
-            }
+            ...i,
+            status: "need_redesign" as const,
+            updatedDate: currentDateTime,
+            rejectionReason: rejectionReason.trim(),
+          }
           : i,
       ),
     )
@@ -1184,11 +1184,11 @@ export default function StoreKitManagementPage() {
         const updatedItems = parsedItems.map((i: any) =>
           i.id === itemToReject.id
             ? {
-                ...i,
-                status: "need_redesign",
-                updatedDate: new Date().toISOString(),
-                rejectionReason: rejectionReason.trim(),
-              }
+              ...i,
+              status: "need_redesign",
+              updatedDate: new Date().toISOString(),
+              rejectionReason: rejectionReason.trim(),
+            }
             : i,
         )
         localStorage.setItem("storekit_items", JSON.stringify(updatedItems))
@@ -1459,7 +1459,7 @@ export default function StoreKitManagementPage() {
         setIsNotificationExpanded(false)
       }
     }] : []),
-  
+
     // FAKE DATA FOR TESTING - XÓA SAU KHI TEST XONG
     ...(true ? [{
       id: 'test5',
@@ -1478,7 +1478,7 @@ export default function StoreKitManagementPage() {
         setIsNotificationExpanded(false)
       },
     }] : []),
-    
+
     ...(true ? [{
       id: 'test6',
       type: 'info' as const,
@@ -1544,8 +1544,8 @@ export default function StoreKitManagementPage() {
   const unreadCount = visibleNotifications.filter(n => !readNotifications.has(n.id)).length
 
   const NOTIFICATION_LIMIT = 3
-  const displayedNotifications = notificationListExpanded 
-    ? visibleNotifications 
+  const displayedNotifications = notificationListExpanded
+    ? visibleNotifications
     : visibleNotifications.slice(0, NOTIFICATION_LIMIT)
   const hasMoreNotifications = visibleNotifications.length > NOTIFICATION_LIMIT
 
@@ -1616,12 +1616,11 @@ export default function StoreKitManagementPage() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Notification List with expand/collapse */}
-                <div 
-                  className={`overflow-y-auto transition-all duration-300 ${
-                    notificationListExpanded ? 'max-h-[600px]' : 'max-h-[400px]'
-                  }`}
+                <div
+                  className={`overflow-y-auto transition-all duration-300 ${notificationListExpanded ? 'max-h-[600px]' : 'max-h-[400px]'
+                    }`}
                   style={{
                     scrollbarWidth: 'thin',
                     scrollbarColor: '#d1d5db transparent',
@@ -1638,11 +1637,10 @@ export default function StoreKitManagementPage() {
                         const IconComponent = notification.icon
                         const isRead = readNotifications.has(notification.id)
                         return (
-                          <div 
+                          <div
                             key={notification.id}
-                            className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group ${
-                              isRead ? 'opacity-60' : ''
-                            }`}
+                            className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group ${isRead ? 'opacity-60' : ''
+                              }`}
                             onClick={notification.onClick}
                           >
                             <div className="flex items-start gap-3">
@@ -1660,8 +1658,8 @@ export default function StoreKitManagementPage() {
                                   <p className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${isRead ? 'font-normal' : ''}`}>
                                     {notification.title}
                                   </p>
-                                  <Badge 
-                                    variant={notification.badgeVariant} 
+                                  <Badge
+                                    variant={notification.badgeVariant}
                                     className={`text-[10px] px-1.5 py-0 h-5 ${notification.badgeVariant === 'default' ? notification.badgeColor : ''}`}
                                   >
                                     {notification.count}
@@ -1678,7 +1676,7 @@ export default function StoreKitManagementPage() {
 
                               {/* Context Menu Button */}
                               <div className="absolute top-3 right-3">
-                                <DropdownMenu 
+                                <DropdownMenu
                                   open={notificationMenuOpen === notification.id}
                                   onOpenChange={(open) => {
                                     setNotificationMenuOpen(open ? notification.id : null)
@@ -2826,8 +2824,8 @@ export default function StoreKitManagementPage() {
             Bạn có chắc chắn muốn xóa thông báo này? Hành động này không thể hoàn tác.
           </p>
           <div className="flex items-center justify-end gap-2 mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setDeleteNotificationDialogOpen(false)
                 setNotificationToDelete(null)
@@ -2835,8 +2833,8 @@ export default function StoreKitManagementPage() {
             >
               Hủy
             </Button>
-            <Button 
-              onClick={confirmDeleteNotification} 
+            <Button
+              onClick={confirmDeleteNotification}
               className="bg-red-600 hover:bg-red-700"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -2846,5 +2844,12 @@ export default function StoreKitManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+export default function StorekitPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <StorekitPageContent />
+    </Suspense>
   )
 }
