@@ -1,7 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts"
+
 interface KeywordDistribution {
   top1_3: number
   top4_10: number
@@ -42,7 +43,7 @@ export function KeywordDistributionChart({ data }: KeywordDistributionChartProps
             <Legend />
             <Bar dataKey="count" name="Keywords" radius={[8, 8, 0, 0]}>
               {chartData.map((entry, index) => (
-                <Bar key={`cell-${index}`} fill={entry.fill} />
+                <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
             </Bar>
           </BarChart>
