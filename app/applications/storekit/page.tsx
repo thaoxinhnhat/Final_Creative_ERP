@@ -50,7 +50,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getStatusBadge } from "@/lib/storekit-utils"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PROJECTS_DATA } from "@/app/applications/aso-dashboard/projects-data"
@@ -907,7 +907,7 @@ function StorekitPageContent() {
   const router = useRouter()
 
   // Use the searchParams hook for accessing query parameters
-  const searchParams = new URLSearchParams(window.location.search)
+  const searchParams = useSearchParams()
   const projectIdFromUrl = searchParams.get("project_id")
   const [selectedProject, setSelectedProject] = useState<string>(projectFilter) // State to hold the selected project ID for filtering
 
