@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { format, isToday, isPast, isFuture, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Calendar, CheckCircle2, Circle, Flag, Tag, AlertCircle, Plus, MoreHorizontal, Folder } from "lucide-react"
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSearchParams } from "next/navigation"
 import { TaskDetailModal } from "@/components/task-detail-modal"
+
 
 // Mock data
 const mockProjects = [
@@ -180,7 +181,7 @@ const priorityColors = {
   high: "text-red-500",
 }
 
-export default function TasksPage() {
+function TasksPageContent() {
   const searchParams = useSearchParams()
   const viewParam = searchParams.get("view") || "today"
   const idParam = searchParams.get("id")
@@ -232,10 +233,10 @@ export default function TasksPage() {
       tasks.map((task) =>
         task.id === taskId
           ? {
-              ...task,
-              completed: !task.completed,
-              workflowStep: !task.completed ? "done" : "todo",
-            }
+            ...task,
+            completed: !task.completed,
+            workflowStep: !task.completed ? "done" : "todo",
+          }
           : task,
       ),
     )
@@ -247,10 +248,10 @@ export default function TasksPage() {
       tasks.map((task) =>
         task.id === taskId
           ? {
-              ...task,
-              workflowStep: newWorkflowStep,
-              completed: newWorkflowStep === "done",
-            }
+            ...task,
+            workflowStep: newWorkflowStep,
+            completed: newWorkflowStep === "done",
+          }
           : task,
       ),
     )
@@ -623,23 +624,23 @@ export default function TasksPage() {
                   !t.completed &&
                   !weekDays.some((day) => format(day, "yyyy-MM-dd") === format(t.dueDate, "yyyy-MM-dd")),
               ).length > 0 && (
-                <div>
-                  <SectionHeader title="Sắp tới" />
-                  <div className="divide-y divide-gray-100 rounded-lg bg-white shadow-sm">
-                    {tasks
-                      .filter(
-                        (t) =>
-                          isFuture(t.dueDate) &&
-                          !t.completed &&
-                          !weekDays.some((day) => format(day, "yyyy-MM-dd") === format(t.dueDate, "yyyy-MM-dd")),
-                      )
-                      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
-                      .map((task) => (
-                        <TaskItem key={task.id} task={task} />
-                      ))}
+                  <div>
+                    <SectionHeader title="Sắp tới" />
+                    <div className="divide-y divide-gray-100 rounded-lg bg-white shadow-sm">
+                      {tasks
+                        .filter(
+                          (t) =>
+                            isFuture(t.dueDate) &&
+                            !t.completed &&
+                            !weekDays.some((day) => format(day, "yyyy-MM-dd") === format(t.dueDate, "yyyy-MM-dd")),
+                        )
+                        .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+                        .map((task) => (
+                          <TaskItem key={task.id} task={task} />
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         )}
@@ -863,5 +864,12 @@ export default function TasksPage() {
       {/* Hidden button for Add Task */}
       <button data-add-task="true" className="hidden" onClick={() => setAddTaskOpen(true)} />
     </>
+  )
+}
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <TasksPageContent />
+    </Suspense>
   )
 }
