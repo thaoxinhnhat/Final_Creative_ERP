@@ -2,10 +2,13 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Info } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ChevronLeft, ChevronRight, Info, Clock, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Task } from "../types"
+import { PRIORITY_CONFIG, TYPE_CONFIG } from "../types"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { teamMembers } from "../mockData"
 
 interface CalendarViewProps {
   onSelectTask: (task: Task) => void
@@ -34,15 +37,35 @@ export function CalendarView({ onSelectTask, tasks, selectedTask, loading }: Cal
     return tasks.filter(t => t.deadline.startsWith(dateStr))
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      overdue: 'bg-gradient-to-r from-red-200 to-red-100 border-red-400',
-      pending: 'bg-gradient-to-r from-orange-200 to-orange-100 border-orange-400',
-      in_progress: 'bg-gradient-to-r from-blue-200 to-blue-100 border-blue-400',
-      review: 'bg-gradient-to-r from-purple-200 to-purple-100 border-purple-400',
-      completed: 'bg-gradient-to-r from-green-200 to-green-100 border-green-400'
+  const getDeadlineColor = (task: Task) => {
+    if (task.status === 'completed') {
+      return 'bg-gradient-to-r from-green-100 to-green-50 border-green-400 text-green-800'
     }
-    return colors[status as keyof typeof colors] || 'bg-gray-100'
+
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const deadline = new Date(task.deadline)
+    deadline.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      return 'bg-gradient-to-r from-red-100 to-red-50 border-red-400 text-red-800'
+    } else if (diffDays <= 1) {
+      return 'bg-gradient-to-r from-orange-100 to-orange-50 border-orange-400 text-orange-800'
+    } else if (diffDays <= 3) {
+      return 'bg-gradient-to-r from-amber-100 to-amber-50 border-amber-400 text-amber-800'
+    } else {
+      return 'bg-gradient-to-r from-blue-100 to-blue-50 border-blue-400 text-blue-800'
+    }
+  }
+
+  const getPriorityBadge = (priority: Task['priority']) => {
+    const config = PRIORITY_CONFIG[priority]
+    return (
+      <Badge className={cn("text-[10px] px-1.5 py-0 h-4", config.badgeClass)}>
+        {config.icon} {config.label}
+      </Badge>
+    )
   }
 
   const previousMonth = () => {
@@ -99,7 +122,7 @@ export function CalendarView({ onSelectTask, tasks, selectedTask, loading }: Cal
           {/* Empty cells before first day */}
           {Array.from({ length: startingDayOfWeek }).map((_, i) => (
             loading ? <SkeletonCell key={`empty-${i}`} /> :
-            <div key={`empty-${i}`} className="bg-white border rounded-lg p-3 min-h-[120px] shadow-sm" />
+              <div key={`empty-${i}`} className="bg-white border rounded-lg p-3 min-h-[120px] shadow-sm" />
           ))}
           {/* Days */}
           {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -133,7 +156,7 @@ export function CalendarView({ onSelectTask, tasks, selectedTask, loading }: Cal
                     {day}
                   </span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {dayTasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-xs text-gray-400 py-4">
                       <Info className="h-5 w-5 mb-1 text-gray-300" />
@@ -141,51 +164,97 @@ export function CalendarView({ onSelectTask, tasks, selectedTask, loading }: Cal
                     </div>
                   ) : (
                     <>
-                      {dayTasks.slice(0, 5).map(task => (
+                      {dayTasks.slice(0, 4).map(task => (
                         <Tooltip key={task.id}>
                           <TooltipTrigger asChild>
                             <div
-                              key={task.id}
                               className={cn(
-                                "text-xs p-2 rounded-md border cursor-pointer",
+                                "text-sm p-2 rounded-lg border-2 cursor-pointer",
                                 "shadow-sm hover:shadow-md",
                                 "transition-all duration-200",
                                 "hover:scale-[1.02] hover:-translate-y-0.5",
                                 "active:scale-[0.98]",
-                                selectedTask?.id === task.id && "ring-2 ring-blue-500 font-semibold",
-                                getStatusColor(task.status)
+                                selectedTask?.id === task.id && "ring-2 ring-purple-500",
+                                getDeadlineColor(task)
                               )}
-                              tabIndex={0}
-                              title={task.title}
                               onClick={() => onSelectTask(task)}
                               onKeyDown={e => {
                                 if (e.key === "Enter" || e.key === " ") onSelectTask(task)
                               }}
-                              aria-label={`Task: ${task.title}`}
+                              tabIndex={0}
                             >
-                              {task.title.length > 22 ? task.title.slice(0, 20) + "…" : task.title}
+                              <div className="flex items-start gap-1.5">
+                                {task.thumbnail && (
+                                  <ImageIcon className="h-3 w-3 flex-shrink-0 mt-0.5 opacity-60" />
+                                )}
+                                <span className="font-medium line-clamp-1 leading-tight">
+                                  {task.title}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center gap-1">
+                                {getPriorityBadge(task.priority)}
+                              </div>
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="font-semibold">{task.title}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Deadline: {new Date(task.deadline).toLocaleDateString("vi-VN")}
-                            </div>
-                            <div className="text-xs text-blue-600">
-                              {(() => {
-                                const days = Math.ceil((new Date(task.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                                if (days < 0) return `${Math.abs(days)} ngày quá hạn`
-                                if (days === 0) return 'Hết hạn hôm nay'
-                                if (days === 1) return 'Hết hạn ngày mai'
-                                return `Còn ${days} ngày`
-                              })()}
+                          <TooltipContent side="right" className="max-w-xs p-0 overflow-hidden">
+                            {/* Thumbnail preview */}
+                            {task.thumbnail && (
+                              <div className="w-full h-32 bg-gray-100 relative">
+                                <img
+                                  src={task.thumbnail}
+                                  alt={task.title}
+                                  className="w-full h-full object-cover"
+                                />
+                                {task.format && (
+                                  <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                    {task.format}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <div className="p-3">
+                              <div className="font-semibold text-sm">{task.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">{task.appName}</div>
+                              {task.campaignName && (
+                                <div className="text-xs text-purple-600">📁 {task.campaignName}</div>
+                              )}
+                              <div className="flex gap-1 mt-2 flex-wrap">
+                                {getPriorityBadge(task.priority)}
+                                <Badge className={cn("text-[10px] h-4", TYPE_CONFIG[task.type].badgeClass)}>
+                                  {TYPE_CONFIG[task.type].icon} {TYPE_CONFIG[task.type].label}
+                                </Badge>
+                              </div>
+                              {task.platform && (
+                                <div className="text-xs mt-2 text-blue-600">
+                                  📱 {task.platform}
+                                </div>
+                              )}
+                              <div className="text-xs mt-2 flex items-center gap-1 text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                {(() => {
+                                  const days = Math.ceil((new Date(task.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                                  if (days < 0) return `${Math.abs(days)} ngày quá hạn`
+                                  if (days === 0) return 'Hết hạn hôm nay'
+                                  if (days === 1) return 'Hết hạn ngày mai'
+                                  return `Còn ${days} ngày`
+                                })()}
+                              </div>
+                              {/* Assignees */}
+                              <div className="mt-2 flex items-center gap-1">
+                                <span className="text-[10px] text-gray-400">Assignee:</span>
+                                {teamMembers.filter(m => task.assignedTo.includes(m.id)).slice(0, 2).map(m => (
+                                  <span key={m.id} className="text-[10px] bg-gray-100 rounded px-1.5 py-0.5">
+                                    {m.avatar}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </TooltipContent>
                         </Tooltip>
                       ))}
-                      {dayTasks.length > 5 && (
-                        <div key={`more-${day}`} className="text-xs text-muted-foreground">
-                          +{dayTasks.length - 5} more
+                      {dayTasks.length > 4 && (
+                        <div className="text-xs text-center text-muted-foreground bg-gray-50 rounded py-1">
+                          +{dayTasks.length - 4} more
                         </div>
                       )}
                     </>
@@ -196,32 +265,35 @@ export function CalendarView({ onSelectTask, tasks, selectedTask, loading }: Cal
           })}
         </div>
         {/* Legend */}
-        <div className="mt-6 flex items-center gap-4 text-sm">
+        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gradient-to-r from-red-400 to-red-200 border border-red-400" />
             <span>Quá hạn</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-r from-orange-400 to-orange-200 border-orange-400 border" />
-            <span>Sắp đến hạn</span>
+            <div className="w-4 h-4 rounded bg-gradient-to-r from-orange-400 to-orange-200 border border-orange-400" />
+            <span>Hôm nay / Ngày mai</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-r from-green-400 to-green-200 border-green-300 border" />
+            <div className="w-4 h-4 rounded bg-gradient-to-r from-amber-400 to-amber-200 border border-amber-400" />
+            <span>Cận hạn (2-3 ngày)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-r from-blue-400 to-blue-200 border border-blue-400" />
+            <span>Bình thường</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-r from-green-400 to-green-200 border border-green-400" />
             <span>Hoàn thành</span>
           </div>
         </div>
-        {/* Animation keyframes (add to global CSS if not present) */}
+        {/* Animation keyframes */}
         <style jsx global>{`
           @keyframes fadein {
             from { opacity: 0; transform: translateY(10px);}
             to { opacity: 1; transform: translateY(0);}
           }
           .animate-fadein { animation: fadein 0.3s forwards; }
-          .animate-pulse { animation: pulse 1.2s infinite; }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-          }
         `}</style>
       </div>
     </TooltipProvider>

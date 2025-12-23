@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { X, CalendarDays, Filter, User, Flag, Layers } from "lucide-react"
+import { X, CalendarDays, Filter, User, Flag, Layers, Check } from "lucide-react"
 import type { TaskStatus, TaskPriority } from "../types"
+import { STATUS_CONFIG, PRIORITY_CONFIG } from "../types"
 import { cn } from "@/lib/utils"
 
 interface FilterPanelProps {
@@ -17,6 +19,8 @@ interface FilterPanelProps {
   onToggleAssignee: (assignee: string) => void
   onClearAll: () => void
   teamMembers: { id: string; name: string }[]
+  selectedDateRange?: string
+  onSelectDateRange?: (range: string) => void
 }
 
 export function FilterPanel({
@@ -28,7 +32,10 @@ export function FilterPanel({
   onToggleAssignee,
   onClearAll,
   teamMembers,
+  selectedDateRange,
+  onSelectDateRange,
 }: FilterPanelProps) {
+  const [localDateRange, setLocalDateRange] = useState<string | undefined>(selectedDateRange)
   const activeCount =
     selectedStatuses.length +
     selectedPriorities.length +
@@ -69,19 +76,34 @@ export function FilterPanel({
             <Label className="text-base font-semibold">Thời gian</Label>
           </div>
           <div className="space-y-2">
-            {["Hôm nay", "Tuần này", "Tháng này", "Tùy chỉnh..."].map((label, idx) => (
-              <Button
-                key={label}
-                variant="outline"
-                size="sm"
-                className="w-full justify-start border transition-colors duration-200 rounded-lg
-                  hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600
-                  active:bg-blue-100 active:border-blue-400"
-                disabled
-              >
-                {label}
-              </Button>
-            ))}
+            {[
+              { id: "today", label: "📅 Hôm nay" },
+              { id: "week", label: "📆 Tuần này" },
+              { id: "month", label: "🗓️ Tháng này" },
+              { id: "all", label: "📋 Tất cả" },
+            ].map((item) => {
+              const isSelected = localDateRange === item.id
+              return (
+                <Button
+                  key={item.id}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "w-full justify-start border transition-colors duration-200 rounded-lg",
+                    isSelected
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600"
+                  )}
+                  onClick={() => {
+                    setLocalDateRange(item.id)
+                    onSelectDateRange?.(item.id)
+                  }}
+                >
+                  {item.label}
+                  {isSelected && <Check className="h-4 w-4 ml-auto" />}
+                </Button>
+              )
+            })}
           </div>
         </div>
         <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
@@ -93,29 +115,35 @@ export function FilterPanel({
             <Label className="text-base font-semibold">Trạng thái</Label>
           </div>
           <div className="space-y-2">
-            {/*
-              { id: "pending", label: "⏳ Chờ xử lý" },
-              { id: "in_progress", label: "🔄 Đang làm" },
-              { id: "review", label: "👀 Review" },
-              { id: "overdue", label: "⚠️ Quá hạn" },
-              { id: "completed", label: "✅ Hoàn thành" },
-            */}
-            {["pending", "in_progress", "review", "overdue", "completed"].map((status) => (
-              <div className="flex items-center" key={status}>
-                <Checkbox
-                  id={`status-${status}`}
-                  checked={selectedStatuses.includes(status as TaskStatus)}
-                  onCheckedChange={() => onToggleStatus(status as TaskStatus)}
-                  className="w-5 h-5 border-2 border-gray-300 rounded-md data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-100 transition-colors duration-200"
-                />
-                <Label
-                  htmlFor={`status-${status}`}
-                  className="ml-2 text-sm cursor-pointer transition-colors duration-200 hover:text-blue-600"
+            {(["pending", "in_progress", "review", "overdue", "completed"] as TaskStatus[]).map((status) => {
+              const config = STATUS_CONFIG[status]
+              const isChecked = selectedStatuses.includes(status)
+              return (
+                <div
+                  className={cn(
+                    "flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200",
+                    isChecked ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"
+                  )}
+                  key={status}
+                  onClick={() => onToggleStatus(status)}
                 >
-                  {status}
-                </Label>
-              </div>
-            ))}
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200",
+                    isChecked
+                      ? "bg-purple-600 border-purple-600"
+                      : "border-gray-300 bg-white"
+                  )}>
+                    {isChecked && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                  </div>
+                  <Label
+                    className="ml-2 text-sm cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{config.icon}</span>
+                    <span className={isChecked ? "font-medium" : ""}>{config.label}</span>
+                  </Label>
+                </div>
+              )
+            })}
           </div>
         </div>
         <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
@@ -127,28 +155,35 @@ export function FilterPanel({
             <Label className="text-base font-semibold">Độ ưu tiên</Label>
           </div>
           <div className="space-y-2">
-            {/*
-              { id: "urgent", label: "🔴 Urgent" },
-              { id: "high", label: "🟠 High" },
-              { id: "medium", label: "🟡 Medium" },
-              { id: "low", label: "🟢 Low" },
-            */}
-            {["urgent", "high", "medium", "low"].map((priority) => (
-              <div className="flex items-center" key={priority}>
-                <Checkbox
-                  id={`priority-${priority}`}
-                  checked={selectedPriorities.includes(priority as TaskPriority)}
-                  onCheckedChange={() => onTogglePriority(priority as TaskPriority)}
-                  className="w-5 h-5 border-2 border-gray-300 rounded-md data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-100 transition-colors duration-200"
-                />
-                <Label
-                  htmlFor={`priority-${priority}`}
-                  className="ml-2 text-sm cursor-pointer transition-colors duration-200 hover:text-blue-600"
+            {(["urgent", "high", "medium", "low"] as TaskPriority[]).map((priority) => {
+              const config = PRIORITY_CONFIG[priority]
+              const isChecked = selectedPriorities.includes(priority)
+              return (
+                <div
+                  className={cn(
+                    "flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200",
+                    isChecked ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"
+                  )}
+                  key={priority}
+                  onClick={() => onTogglePriority(priority)}
                 >
-                  {priority}
-                </Label>
-              </div>
-            ))}
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200",
+                    isChecked
+                      ? "bg-purple-600 border-purple-600"
+                      : "border-gray-300 bg-white"
+                  )}>
+                    {isChecked && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                  </div>
+                  <Label
+                    className="ml-2 text-sm cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{config.icon}</span>
+                    <span className={isChecked ? "font-medium" : ""}>{config.label}</span>
+                  </Label>
+                </div>
+              )
+            })}
           </div>
         </div>
         <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
@@ -160,22 +195,31 @@ export function FilterPanel({
             <Label className="text-base font-semibold">Người phụ trách</Label>
           </div>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {teamMembers.map((member) => (
-              <div className="flex items-center" key={member.id}>
-                <Checkbox
-                  id={`assignee-${member.id}`}
-                  checked={selectedAssignees.includes(member.id)}
-                  onCheckedChange={() => onToggleAssignee(member.id)}
-                  className="w-5 h-5 border-2 border-gray-300 rounded-md data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-100 transition-colors duration-200"
-                />
-                <Label
-                  htmlFor={`assignee-${member.id}`}
-                  className="ml-2 text-sm cursor-pointer transition-colors duration-200 hover:text-blue-600"
+            {teamMembers.map((member) => {
+              const isChecked = selectedAssignees.includes(member.id)
+              return (
+                <div
+                  className={cn(
+                    "flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200",
+                    isChecked ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"
+                  )}
+                  key={member.id}
+                  onClick={() => onToggleAssignee(member.id)}
                 >
-                  {member.name}
-                </Label>
-              </div>
-            ))}
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200",
+                    isChecked
+                      ? "bg-purple-600 border-purple-600"
+                      : "border-gray-300 bg-white"
+                  )}>
+                    {isChecked && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                  </div>
+                  <Label className="ml-2 text-sm cursor-pointer">
+                    <span className={isChecked ? "font-medium" : ""}>{member.name}</span>
+                  </Label>
+                </div>
+              )
+            })}
           </div>
         </div>
         <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
