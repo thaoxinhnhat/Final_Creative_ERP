@@ -1,0 +1,41 @@
+-------------------------------------------------
+| Header Filters: Date | Country | OS | Device |
+| KPI Cards:  Avg Rating | Total Ratings | Reviews | Sentiment |
+-------------------------------------------------
+
+[ Section A: Rating Distribution + Sentiment ]
+| [Stacked Bar Chart]  | [Line Chart Sentiment] |
+
+-------------------------------------------------
+
+[ Section B: Performance Over Time ]
+| Line Chart: App Rating vs Peer Median |
+
+-------------------------------------------------
+
+[ Section C: Ratings Breakdown (Accordion) ]
+▼ Country/Region   [table + mini chart]
+▼ Language         [table + mini chart]
+▼ Version/OS       [table + mini chart]
+▼ Device/Carrier   [table + mini chart]
+
+-------------------------------------------------
+
+[ Section D: Reviews Feed ]
+| Review Card 1: Avatar + User + Flag + Stars + Content + Reply |
+| Review Card 2: Avatar + User + Flag + Stars + Content + Reply |
+... (scroll list)
+
+Quick Filter: [Only 1★] [Only 5★] [With Text] [Translated]
+
+-------------------------------------------------
+
+[ Section E: Insights ]
+| Keyword Cloud (positive = xanh, negative = đỏ) |
+| AI Summary Card: "Most users complain about crash on Android 14" |
+
+-------------------------------------------------
+
+[ Section F: Export & Automation ]
+| Export CSV | Export PDF | Auto Report Weekly/Monthly |
+-------------------------------------------------

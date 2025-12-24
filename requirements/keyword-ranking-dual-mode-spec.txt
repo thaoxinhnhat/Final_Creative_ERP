@@ -1,0 +1,126 @@
+feature: Keyword Ranking — Dual Mode (App | Keyword)
+context: |
+  Trong tab "Keyword" → sub-tab **Keyword Ranking**, bổ sung lựa chọn hiển thị biểu đồ theo 2 chế độ:
+  1) Chart by **App**
+  2) Chart by **Keyword**
+  Tùy chế độ, panel bên phải sẽ thay đổi nội dung:
+  - App → hiển thị **Top Apps**
+  - Keyword → hiển thị **Top Similar Keywords**
+  Bảng dữ liệu từ khóa phía dưới giữ nguyên cấu trúc cột hiện tại, CHỈ bỏ cột cuối cùng (icon xóa keyword).
+
+requirements:
+  global_filters:
+    use_single_top_bar: true   # Date Range, Country, Device/OS, Min Traffic, Granularity, Keywords input
+    shared_state_targets: ["kr.chart", "kr.sidePanel", "kr.keywordTable"]
+
+  layout:
+    - id: kr.chart
+      type: line_chart
+      title: "Keyword Ranking"
+      height: 360
+      controls:
+        - type: segmented
+          key: chartMode
+          options: [{label: "App", value: "app"}, {label: "Keyword", value: "keyword"}]
+          default: "app"
+      axes:
+        x: timeline   # theo Date Range & granularity
+        y:
+          label: "Rank position (lower is better)"
+          inverted: true   # Rank 1 ở trên
+      series:
+        source: global_filters + chartMode
+        mode:
+          app:
+            # mỗi series là 1 app (app đang xem + competitors nếu có)
+            legend: "App name"
+            colorBy: app
+          keyword:
+            # mỗi series là 1 keyword đang được chọn/tracking
+            legend: "Keyword"
+            colorBy: keyword
+      tooltip:
+        fields: ["date","seriesLabel","rank","delta"]   # delta ↑/↓ nếu có
+      interactions:
+        legendToggle: true
+        hoverSync: true
+
+    - id: kr.sidePanel
+      type: side_panel
+      position: right
+      width: 320
+      source: global_filters + chartMode
+      modes:
+        app:
+          title: "Top Apps for {activeCategoryOrTerm}"
+          list:
+            item:
+              fields:
+                - icon: appIcon
+                - primary: appName
+                - secondary: "rating • price"
+                - badge: rank
+        keyword:
+          title: "Top Similar Keywords"
+          list:
+            item:
+              fields:
+                - primary: keyword
+                - secondary: "Traffic: {traffic}"
+                - badge: rank
+      empty_state: "No suggestions for the current filters."
+
+    - id: kr.keywordTable
+      type: data_table
+      title: "Keywords"
+      columns:
+        - { key: "term",          label: "Search Term",   sortable: true }
+        - { key: "traffic",       label: "Traffic",       sortable: true }
+        - { key: "difficulty",    label: "Phone Difficulty", sortable: true }
+        - { key: "apps",          label: "Phone Apps",    sortable: true }   # cho phép hiển thị '240+'
+        - { key: "rank",          label: "Phone Rank",    sortable: true, trendIndicator: true } # up/down màu xanh/đỏ
+        - { key: "density",       label: "Density",       sortable: true, format: "percent1" }
+        - { key: "downloads",     label: "Downloads",     sortable: true, format: "compactNumber" }  # 1.5M/23.4K…
+      remove_columns: ["actions_delete"]   # BỎ cột icon xóa keyword
+      top_actions:
+        right:
+          - { type: "button", label: "Edit Keywords",      action: openEditKeywords }
+          - { type: "button", label: "Download Reports",   action: exportCSV }
+          - { type: "button", label: "Add New Keyword",    action: openAddKeyword }
+        left:
+          - { type: "dropdown", label: "All Keywords", key: keywordScope }  # giữ nếu đã có
+          - { type: "search",   placeholder: "Filter keywords" }
+      empty_state: "No rows for the current filters."
+      loading_skeleton: true
+
+data_contracts:
+  inputs_from_global_filter:
+    - dateRange
+    - country
+    - device
+    - os
+    - minTraffic
+    - keywords
+    - granularity
+  chart_app_mode_record:
+    - { appId, appName, color, points: [{date, rank, delta}] }
+  chart_keyword_mode_record:
+    - { term, color, points: [{date, rank, delta}] }
+  sidepanel_app_item:
+    - { rank, appIcon, appName, rating, price }
+  sidepanel_keyword_item:
+    - { rank, keyword, traffic }
+  table_row:
+    - { term, traffic, difficulty, apps, rank, rankDelta, density, downloads }
+
+rules:
+  - Chỉ hiển thị **một** filter bar ở trên cùng tab Keyword.
+  - Toggle **App/Keyword** chỉ ảnh hưởng chart + side panel; **không** thay đổi filter bar.
+  - Chart, side panel, table phải cập nhật đồng bộ khi user đổi bất kỳ filter nào.
+  - Giữ nguyên theme/spacing/rounded/shadow; responsive desktop.
+
+acceptance_criteria:
+  - Khi chartMode="app": line chart theo app; side panel → **Top Apps** (top 10), table giữ nguyên cột (không có cột delete).
+  - Khi chartMode="keyword": line chart theo keyword; side panel → **Top Similar Keywords** (top 15), table giữ nguyên.
+  - Không có filter/app header bị lặp lại ở dưới.
+  - Empty & loading states hoạt động đúng mô tả.

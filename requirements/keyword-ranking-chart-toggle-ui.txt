@@ -1,0 +1,49 @@
+ui_patch: Keyword Ranking – Chart By toggle (App | Keyword)
+where: keyword_tab.keyword_ranking.header.controls.chartMode
+change:
+  type: segmented_toggle
+  label: "Chart By:"
+  key: chartMode
+  options:
+    - { label: "App", value: "app" }
+    - { label: "Keyword", value: "keyword" }
+  default: "app"
+  # === Visuals to match the provided look ===
+  style:
+    variant: "pill"            # rounded segmented control
+    size: "sm"                 # compact like screenshot
+    radius: 999                # full rounded
+    containerBg: "#EFF1F4"     # light gray background behind the two pills
+    gap: 0
+    item:
+      paddingX: 12
+      paddingY: 6
+      fontWeight: 600
+      color: "#2B2F36"
+      hoverBg: "transparent"
+    itemSelected:
+      bg: "#4A5A70"            # dark slate like screenshot
+      color: "#FFFFFF"
+      shadow: none
+      border: "1px solid #4A5A70"
+    itemUnselected:
+      bg: "transparent"
+      color: "#2B2F36"
+      border: "1px solid transparent"
+  # === Accessibility / behavior ===
+  a11y:
+    role: "tablist"
+    tabRole: "tab"
+    ariaLabel: "Chart By"
+    focusRing: "2px solid #8AB4F8"
+  onChange:
+    - target: kr.chart         # update line chart mode
+      prop: mode
+      valueFrom: chartMode
+    - target: kr.sidePanel     # swap right panel (Top Apps | Top Similar Keywords)
+      prop: mode
+      valueFrom: chartMode
+notes:
+  - Toggle shows exactly two pills: **App** (left) and **Keyword** (right).
+  - Selected pill is dark filled (as in screenshot); unselected pill is light/flat.
+  - Keep existing data/logic; only the control’s visual & component type are changed.
