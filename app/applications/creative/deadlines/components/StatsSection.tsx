@@ -119,6 +119,77 @@ export function StatsSection({ tasks, workload }: StatsSectionProps) {
                 ))}
             </div>
 
+            {/* Source Distribution (Brief/Order Integration) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Brief Tasks */}
+                <Card className="border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white">
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-pink-100">
+                                <Calendar className="h-5 w-5 text-pink-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Từ Brief</p>
+                                <p className="text-2xl font-bold text-pink-600">
+                                    {tasks.filter(t => t.source === 'brief').length}
+                                </p>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Badge className="text-[9px] px-1.5 py-0 bg-pink-100 text-pink-700">📄 Brief</Badge>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Order Tasks */}
+                <Card className="border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-white">
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-cyan-100">
+                                <Zap className="h-5 w-5 text-cyan-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Từ Order</p>
+                                <p className="text-2xl font-bold text-cyan-600">
+                                    {tasks.filter(t => t.source === 'order').length}
+                                </p>
+                                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                    <Badge className="text-[9px] px-1.5 py-0 bg-purple-100 text-purple-700">
+                                        🎨 {tasks.filter(t => t.source === 'order' && t.teamType === 'design').length}
+                                    </Badge>
+                                    <Badge className="text-[9px] px-1.5 py-0 bg-pink-100 text-pink-700">
+                                        📸 {tasks.filter(t => t.source === 'order' && t.teamType === 'art_stylist').length}
+                                    </Badge>
+                                    <Badge className="text-[9px] px-1.5 py-0 bg-cyan-100 text-cyan-700">
+                                        ✨ {tasks.filter(t => t.source === 'order' && t.teamType === 'ai_producer').length}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Standalone Tasks */}
+                <Card className="border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-gray-100">
+                                <TrendingUp className="h-5 w-5 text-gray-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Standalone</p>
+                                <p className="text-2xl font-bold text-gray-600">
+                                    {tasks.filter(t => !t.source || t.source === 'standalone').length}
+                                </p>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Badge className="text-[9px] px-1.5 py-0 bg-gray-100 text-gray-600">📋 Tasks</Badge>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
             {/* Workload by Designer */}
             <Card className="border-2 border-gray-200 shadow-sm">
                 <CardHeader className="pb-2">

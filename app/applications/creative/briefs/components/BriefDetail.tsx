@@ -29,6 +29,8 @@ import { StatusBadge, PriorityBadge } from "./BriefCard"
 import type { Brief, TeamMember } from "../types"
 import { useState, useEffect, useRef } from "react"
 import { RefundModal } from "./RefundModal"
+import { LinkedConceptsSection } from "./LinkedConceptsSection"
+import { CreateConceptFromBriefModal } from "./CreateConceptFromBriefModal"
 import { toast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
@@ -47,6 +49,8 @@ interface BriefDetailProps {
   onStartWork: () => void
   onMarkFixed: () => void
   isUpdating?: boolean
+  // NEW: Concept integration
+  onCreateConceptFromBrief?: (data: { title: string; description: string; tags: string[] }) => void
 }
 
 // ============================================
@@ -62,6 +66,7 @@ export function BriefDetail({
   onStartWork,
   onMarkFixed,
   isUpdating = false,
+  onCreateConceptFromBrief,
 }: BriefDetailProps) {
   // Empty state
   if (!brief) {
@@ -77,6 +82,7 @@ export function BriefDetail({
   const getAssigneeInfo = (id: string) => teamMembers.find(m => m.id === id)
 
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [showCreateConceptModal, setShowCreateConceptModal] = useState(false)
   const [isRefunded, setIsRefunded] = useState(brief.status === "returned_to_ua")
   const [loading, setLoading] = useState(false)
 
@@ -724,6 +730,13 @@ export function BriefDetail({
             )}
           </div>
 
+          {/* Section: Linked Concepts */}
+          <Separator />
+          <LinkedConceptsSection
+            brief={brief}
+            onCreateConcept={() => setShowCreateConceptModal(true)}
+          />
+
           {/* Section: Lead Creative Info */}
           {!["draft", "pending", "returned_to_ua"].includes(brief.status) && (
             <>
@@ -889,6 +902,18 @@ export function BriefDetail({
           onRefundSuccess={handleRefundSuccess}
         />
       )}
+
+      {/* Create Concept from Brief Modal */}
+      <CreateConceptFromBriefModal
+        open={showCreateConceptModal}
+        onOpenChange={setShowCreateConceptModal}
+        brief={brief}
+        onSubmit={(data) => {
+          if (onCreateConceptFromBrief) {
+            onCreateConceptFromBrief(data)
+          }
+        }}
+      />
 
       {/* Popup: Member gửi Lead Creative duyệt */}
       <Dialog open={showSendForReview} onOpenChange={setShowSendForReview}>

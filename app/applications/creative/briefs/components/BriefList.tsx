@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Settings,
 } from "lucide-react"
 import { differenceInDays } from "date-fns"
 import { BriefCard } from "./BriefCard"
@@ -59,64 +60,149 @@ const BriefListSkeleton = () => (
 )
 
 // ============================================
-// STATS BAR COMPONENT (now clickable)
+// STATS BAR COMPONENT (now with settings)
 // ============================================
+type StatKey = 'completed' | 'inProgress' | 'pending' | 'overdue' | 'waitingDesign' | 'needRevision' | 'waitingLeadReview' | 'waitingUAReview'
+
+interface StatConfig {
+  key: StatKey
+  label: string
+  shortLabel: string
+  icon: React.ReactNode
+  bgColor: string
+  textColor: string
+  iconColor: string
+}
+
+const ALL_STATS: StatConfig[] = [
+  // === Workflow Order (top to bottom) ===
+  // 1. Chờ nhận brief
+  { key: 'pending', label: 'Chờ nhận', shortLabel: 'Chờ nhận', icon: <AlertCircle className="h-4 w-4" />, bgColor: 'bg-yellow-50 dark:bg-yellow-950', textColor: 'text-yellow-700 dark:text-yellow-400', iconColor: 'text-yellow-600' },
+  // 2. Đang xử lý
+  { key: 'inProgress', label: 'Đang xử lý', shortLabel: 'Đang xử lý', icon: <Clock className="h-4 w-4" />, bgColor: 'bg-blue-50 dark:bg-blue-950', textColor: 'text-blue-700 dark:text-blue-400', iconColor: 'text-blue-600' },
+  // 3. Design workflow
+  { key: 'waitingDesign', label: 'Chờ Design', shortLabel: 'Chờ Design', icon: <Clock className="h-4 w-4" />, bgColor: 'bg-purple-50 dark:bg-purple-950', textColor: 'text-purple-700 dark:text-purple-400', iconColor: 'text-purple-600' },
+  // 4. Review workflow
+  { key: 'needRevision', label: 'Cần chỉnh sửa', shortLabel: 'Chỉnh sửa', icon: <AlertCircle className="h-4 w-4" />, bgColor: 'bg-orange-50 dark:bg-orange-950', textColor: 'text-orange-700 dark:text-orange-400', iconColor: 'text-orange-600' },
+  { key: 'waitingLeadReview', label: 'Chờ Lead duyệt', shortLabel: 'Chờ Lead', icon: <Clock className="h-4 w-4" />, bgColor: 'bg-indigo-50 dark:bg-indigo-950', textColor: 'text-indigo-700 dark:text-indigo-400', iconColor: 'text-indigo-600' },
+  { key: 'waitingUAReview', label: 'Chờ UA nghiệm thu', shortLabel: 'Chờ UA', icon: <Clock className="h-4 w-4" />, bgColor: 'bg-teal-50 dark:bg-teal-950', textColor: 'text-teal-700 dark:text-teal-400', iconColor: 'text-teal-600' },
+  // 5. Kết thúc
+  { key: 'completed', label: 'Hoàn thành', shortLabel: 'Hoàn thành', icon: <CheckCircle2 className="h-4 w-4" />, bgColor: 'bg-green-50 dark:bg-green-950', textColor: 'text-green-700 dark:text-green-400', iconColor: 'text-green-600' },
+  // 6. Quá hạn (cross-cutting)
+  { key: 'overdue', label: 'Quá hạn', shortLabel: 'Quá hạn', icon: <CalendarIcon className="h-4 w-4" />, bgColor: 'bg-red-50 dark:bg-red-950', textColor: 'text-red-700 dark:text-red-400', iconColor: 'text-red-600' },
+]
+
+const DEFAULT_VISIBLE_STATS: StatKey[] = ['pending', 'inProgress', 'waitingDesign', 'completed']
+
 const StatsBar = ({
   stats,
   selectedStat,
   onStatClick,
+  visibleStats,
+  onVisibleStatsChange,
 }: {
-  stats: { completed: number; inProgress: number; pending: number; overdue: number }
-  selectedStat: 'completed' | 'inProgress' | 'pending' | 'overdue' | null
-  onStatClick: (stat: 'completed' | 'inProgress' | 'pending' | 'overdue') => void
-}) => (
-  <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b">
-    <button
-      type="button"
-      onClick={() => onStatClick("completed")}
-      className={`flex flex-col items-center p-2 rounded-lg bg-green-50 dark:bg-green-950 transition
-        ${selectedStat === "completed" ? "ring-2 ring-green-500 border-green-500 border-2" : "hover:ring-2 hover:ring-green-400"}
-        focus:outline-none`}
-    >
-      <CheckCircle2 className="h-4 w-4 text-green-600 mb-1" />
-      <span className="text-lg font-bold text-green-700 dark:text-green-400">{stats.completed}</span>
-      <span className="text-[10px] text-green-600 dark:text-green-500">Hoàn thành</span>
-    </button>
-    <button
-      type="button"
-      onClick={() => onStatClick("inProgress")}
-      className={`flex flex-col items-center p-2 rounded-lg bg-blue-50 dark:bg-blue-950 transition
-        ${selectedStat === "inProgress" ? "ring-2 ring-blue-500 border-blue-500 border-2" : "hover:ring-2 hover:ring-blue-400"}
-        focus:outline-none`}
-    >
-      <Clock className="h-4 w-4 text-blue-600 mb-1" />
-      <span className="text-lg font-bold text-blue-700 dark:text-blue-400">{stats.inProgress}</span>
-      <span className="text-[10px] text-blue-600 dark:text-blue-500">Đang xử lý</span>
-    </button>
-    <button
-      type="button"
-      onClick={() => onStatClick("pending")}
-      className={`flex flex-col items-center p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950 transition
-        ${selectedStat === "pending" ? "ring-2 ring-yellow-500 border-yellow-500 border-2" : "hover:ring-2 hover:ring-yellow-400"}
-        focus:outline-none`}
-    >
-      <AlertCircle className="h-4 w-4 text-yellow-600 mb-1" />
-      <span className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{stats.pending}</span>
-      <span className="text-[10px] text-yellow-600 dark:text-yellow-500">Chờ xác nhận</span>
-    </button>
-    <button
-      type="button"
-      onClick={() => onStatClick("overdue")}
-      className={`flex flex-col items-center p-2 rounded-lg bg-red-50 dark:bg-red-950 transition
-        ${selectedStat === "overdue" ? "ring-2 ring-red-500 border-red-500 border-2" : "hover:ring-2 hover:ring-red-400"}
-        focus:outline-none`}
-    >
-      <CalendarIcon className="h-4 w-4 text-red-600 mb-1" />
-      <span className="text-lg font-bold text-red-700 dark:text-red-400">{stats.overdue}</span>
-      <span className="text-[10px] text-red-600 dark:text-red-500">Quá hạn</span>
-    </button>
-  </div>
-)
+  stats: Record<StatKey, number>
+  selectedStat: StatKey | null
+  onStatClick: (stat: StatKey) => void
+  visibleStats: StatKey[]
+  onVisibleStatsChange: (stats: StatKey[]) => void
+}) => {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  const toggleStatVisibility = (key: StatKey) => {
+    if (visibleStats.includes(key)) {
+      // Don't allow removing if only 1 left
+      if (visibleStats.length > 1) {
+        onVisibleStatsChange(visibleStats.filter(s => s !== key))
+      }
+    } else {
+      onVisibleStatsChange([...visibleStats, key])
+    }
+  }
+
+  const visibleStatConfigs = ALL_STATS.filter(s => visibleStats.includes(s.key))
+  const gridCols = visibleStatConfigs.length <= 4 ? `grid-cols-${visibleStatConfigs.length}` : 'grid-cols-4'
+
+  return (
+    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border-b">
+      <div className="flex items-center gap-2">
+        {/* Stats Grid */}
+        <div className={`flex-1 grid gap-2 ${visibleStatConfigs.length === 2 ? 'grid-cols-2' : visibleStatConfigs.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+          {visibleStatConfigs.map((config) => (
+            <button
+              key={config.key}
+              type="button"
+              onClick={() => onStatClick(config.key)}
+              className={`flex flex-col items-center p-2 rounded-lg ${config.bgColor} transition
+                ${selectedStat === config.key ? "ring-2 ring-offset-1 ring-blue-500 border-2 border-blue-500" : "hover:ring-2 hover:ring-gray-300"}
+                focus:outline-none`}
+            >
+              <span className={config.iconColor}>{config.icon}</span>
+              <span className={`text-lg font-bold ${config.textColor}`}>{stats[config.key] || 0}</span>
+              <span className={`text-[10px] ${config.iconColor} truncate max-w-full`}>{config.shortLabel}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Settings Icon */}
+        <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+              title="Cài đặt hiển thị trạng thái"
+            >
+              <Settings className="h-4 w-4 text-gray-500" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="end">
+            <div className="p-3 border-b bg-gray-50 dark:bg-gray-800">
+              <h4 className="font-semibold text-sm">Cài đặt hiển thị</h4>
+              <p className="text-xs text-muted-foreground mt-1">Chọn trạng thái muốn hiển thị</p>
+            </div>
+            <div className="p-2 space-y-1 max-h-[300px] overflow-y-auto">
+              {ALL_STATS.map((config) => {
+                const isVisible = visibleStats.includes(config.key)
+                const isDisabled = isVisible && visibleStats.length === 1
+                return (
+                  <button
+                    key={config.key}
+                    type="button"
+                    onClick={() => toggleStatVisibility(config.key)}
+                    disabled={isDisabled}
+                    className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition
+                      ${isVisible ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}
+                      ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <div className={`p-1 rounded ${config.bgColor}`}>
+                      <span className={config.iconColor}>{config.icon}</span>
+                    </div>
+                    <span className="text-sm flex-1">{config.label}</span>
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center
+                      ${isVisible ? 'bg-blue-500 border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                    >
+                      {isVisible && <CheckCircle2 className="h-3 w-3 text-white" />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="p-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => onVisibleStatsChange(DEFAULT_VISIBLE_STATS)}
+              >
+                Đặt lại mặc định
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  )
+}
 
 // ============================================
 // ADVANCED FILTER COMPONENT
@@ -354,23 +440,25 @@ export function BriefList({
     })
   }
 
-  // Stats - Smarter view for Creative team
-  const stats = useMemo(() => {
+  // Stats - Smarter view for Creative team (all 8 stat keys)
+  const stats = useMemo((): Record<StatKey, number> => {
     const now = new Date()
     return {
       completed: briefs.filter(b => b.status === "completed").length,
       inProgress: briefs.filter(b =>
         b.status === "in_progress" ||
         b.status === "confirmed" ||
-        b.status === "waiting_design" ||
-        b.status === "design_done" ||
-        b.status === "need_revision"
+        b.status === "design_done"
       ).length,
-      pending: briefs.filter(b => b.status === "pending" || b.status === "waiting_lead_review" || b.status === "waiting_ua_review").length,
+      pending: briefs.filter(b => b.status === "pending").length,
       overdue: briefs.filter(b => {
         const daysUntil = differenceInDays(new Date(b.deadline), now)
         return daysUntil < 0 && b.status !== "completed" && b.status !== "returned_to_ua"
       }).length,
+      waitingDesign: briefs.filter(b => b.status === "waiting_design").length,
+      needRevision: briefs.filter(b => b.status === "need_revision").length,
+      waitingLeadReview: briefs.filter(b => b.status === "waiting_lead_review").length,
+      waitingUAReview: briefs.filter(b => b.status === "waiting_ua_review").length,
     }
   }, [briefs])
 
@@ -407,19 +495,25 @@ export function BriefList({
     return groups
   }, [filteredBriefs])
 
-  // Status labels for all 12 statuses - display order (Creative team perspective)
+  // Status labels for all 12 statuses - display order (Workflow order)
   const statusDisplayOrder = [
-    "pending",           // Chờ nhận (Lead cần xử lý)
-    "need_revision",     // Cần chỉnh sửa (urgent)
-    "waiting_design",    // Chờ Design
-    "design_returned",   // Design trả về
-    "design_done",       // Design Done
-    "in_progress",       // Đang thực hiện
+    // === Workflow Order ===
+    // 1. Khởi tạo
+    "draft",             // Nháp
+    "pending",           // Chờ nhận
+    // 2. Đang thực hiện
     "confirmed",         // Đã xác nhận
+    "in_progress",       // Đang thực hiện
+    // 3. Design workflow
+    "waiting_design",    // Chờ Design
+    "design_done",       // Design Done
+    "design_returned",   // Design trả về
+    // 4. Review workflow
+    "need_revision",     // Cần chỉnh sửa
     "waiting_lead_review", // Chờ Lead duyệt
     "waiting_ua_review", // Chờ UA nghiệm thu
+    // 5. Kết thúc
     "completed",         // Hoàn thành
-    "draft",             // Nháp
     "returned_to_ua",    // Trả về UA
   ]
 
@@ -444,8 +538,9 @@ export function BriefList({
   })
 
   // --- STATS BAR FILTER STATE ---
-  const [selectedStat, setSelectedStat] = useState<'completed' | 'inProgress' | 'pending' | 'overdue' | null>(null)
-  const handleStatClick = (stat: 'completed' | 'inProgress' | 'pending' | 'overdue') => {
+  const [selectedStat, setSelectedStat] = useState<StatKey | null>(null)
+  const [visibleStats, setVisibleStats] = useState<StatKey[]>(DEFAULT_VISIBLE_STATS)
+  const handleStatClick = (stat: StatKey) => {
     setSelectedStat(prev => prev === stat ? null : stat)
   }
 
@@ -615,6 +710,8 @@ export function BriefList({
           stats={stats}
           selectedStat={selectedStat}
           onStatClick={handleStatClick}
+          visibleStats={visibleStats}
+          onVisibleStatsChange={setVisibleStats}
         />
       )}
 

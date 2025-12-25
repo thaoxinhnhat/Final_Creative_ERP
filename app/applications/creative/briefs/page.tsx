@@ -296,6 +296,21 @@ function BriefsPageContent() {
     }
   }
 
+  // Handler for creating concept from brief
+  const handleCreateConceptFromBrief = (data: { title: string; description: string; tags: string[] }) => {
+    if (!selectedBrief) return
+
+    // Show success toast with concept info
+    toast({
+      title: "✓ Đã tạo Concept",
+      description: `Concept "${data.title}" đã được tạo từ Brief "${selectedBrief.title}".`,
+    })
+
+    // Navigate to Concepts page after creation
+    // In real app, this would call concepts API and then navigate
+    router.push("/applications/creative/concepts")
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
       {/* Simplified Header - No Refresh button, no role text */}
@@ -357,6 +372,7 @@ function BriefsPageContent() {
             onStartWork={() => handleUpdateStatus("in_progress")}
             onMarkFixed={() => handleUpdateStatus("in_progress")}
             isUpdating={isUpdatingStatus}
+            onCreateConceptFromBrief={handleCreateConceptFromBrief}
           />
         </div>
 

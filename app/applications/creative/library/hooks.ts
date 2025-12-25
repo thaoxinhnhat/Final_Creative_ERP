@@ -18,7 +18,7 @@ function detectFileType(ext: string): AssetType {
   const videoExts = ['mp4', 'mov', 'avi', 'webm']
   const docExts = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx']
   const templateExts = ['psd', 'ai', 'figma', 'sketch', 'xd']
-  
+
   if (imageExts.includes(ext.toLowerCase())) return 'image'
   if (videoExts.includes(ext.toLowerCase())) return 'video'
   if (docExts.includes(ext.toLowerCase())) return 'document'
@@ -126,6 +126,7 @@ export function useAssets() {
         campaignName: formData.campaignName,
         appName: formData.appName,
         briefId: formData.briefId,
+        conceptId: formData.conceptId, // NEW: Link to concept
         uploadedBy: "Creative Team",
         uploadedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -136,6 +137,63 @@ export function useAssets() {
     })
     setAssets(prev => [...newAssets, ...prev])
     return newAssets
+  }, [])
+
+  // NEW: Auto-save deliverable from completed concept order
+  interface DeliverableFromConcept {
+    name: string
+    fileUrl: string
+    thumbnailUrl?: string
+    type: AssetType
+    fileSize: number
+    fileExtension: string
+    briefId?: string
+    briefTitle?: string
+    conceptId: string
+    conceptTitle: string
+    teamType: string
+    campaignName?: string
+    appName?: string
+  }
+
+  const saveDeliverableFromConcept = useCallback(async (deliverable: DeliverableFromConcept): Promise<Asset> => {
+    // Auto-generate tags from Brief and Concept info
+    const autoTags: string[] = [
+      `concept:${deliverable.conceptId}`,
+      `team:${deliverable.teamType}`,
+    ]
+    if (deliverable.briefId) {
+      autoTags.push(`brief:${deliverable.briefId}`)
+    }
+    if (deliverable.campaignName) {
+      autoTags.push(`campaign:${deliverable.campaignName}`)
+    }
+
+    const newAsset: Asset = {
+      id: `asset_${Date.now()}_auto`,
+      name: deliverable.name,
+      type: deliverable.type,
+      category: 'final_creative', // Auto-category for deliverables
+      fileUrl: deliverable.fileUrl,
+      thumbnailUrl: deliverable.thumbnailUrl,
+      fileSize: deliverable.fileSize,
+      fileExtension: deliverable.fileExtension,
+      description: `Deliverable từ Concept "${deliverable.conceptTitle}"${deliverable.briefTitle ? ` / Brief "${deliverable.briefTitle}"` : ''}`,
+      tags: autoTags,
+      campaignName: deliverable.campaignName,
+      appName: deliverable.appName,
+      briefId: deliverable.briefId,
+      conceptId: deliverable.conceptId,
+      uploadedBy: `${deliverable.teamType} Team`,
+      uploadedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "active",
+      downloads: 0,
+      views: 0,
+    }
+
+    setAssets(prev => [newAsset, ...prev])
+    return newAsset
   }, [])
 
   const deleteAsset = useCallback((id: string) => {
@@ -170,6 +228,7 @@ export function useAssets() {
     toggleTypeFilter,
     toggleCategoryFilter,
     uploadAssets,
+    saveDeliverableFromConcept, // NEW: Auto-save from concept
     deleteAsset,
     incrementViews,
     incrementDownloads,

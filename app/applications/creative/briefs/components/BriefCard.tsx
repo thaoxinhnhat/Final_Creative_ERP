@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Calendar as CalendarIcon, ChevronRight, Flag, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { format, differenceInDays } from "date-fns"
@@ -61,8 +62,26 @@ export const PriorityBadge = ({ priority }: { priority: Priority }) => {
 // DEADLINE DISPLAY COMPONENT
 // ============================================
 const DeadlineDisplay = ({ deadline, status }: { deadline: string; status: BriefStatus }) => {
-  const now = new Date()
+  const [mounted, setMounted] = useState(false)
   const deadlineDate = new Date(deadline)
+
+  // Only render dynamic date content on client to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Server render: just show formatted date
+  if (!mounted) {
+    return (
+      <div className="text-xs flex items-center gap-1 text-muted-foreground">
+        <CalendarIcon className="h-3 w-3" />
+        <span>{format(deadlineDate, "dd/MM")}</span>
+      </div>
+    )
+  }
+
+  // Client render: show dynamic deadline info
+  const now = new Date()
   const daysUntil = differenceInDays(deadlineDate, now)
 
   // Completed or returned_to_ua briefs don't need deadline warnings
@@ -117,11 +136,18 @@ interface BriefCardProps {
 // BRIEF CARD COMPONENT
 // ============================================
 export function BriefCard({ brief, isSelected, onClick, onAcceptClick }: BriefCardProps) {
+  const [mounted, setMounted] = useState(false)
   const statusConfig = getStatusConfig(brief.status)
-  const daysUntilDeadline = differenceInDays(new Date(brief.deadline), new Date())
-  const isOverdue = daysUntilDeadline < 0 && brief.status !== "completed" && brief.status !== "returned_to_ua"
-  const isUrgent = daysUntilDeadline >= 0 && daysUntilDeadline <= 3 && brief.status !== "completed" && brief.status !== "returned_to_ua"
   const isPending = brief.status === "pending"
+
+  // Only calculate date-based styling on client to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const daysUntilDeadline = mounted ? differenceInDays(new Date(brief.deadline), new Date()) : 999
+  const isOverdue = mounted && daysUntilDeadline < 0 && brief.status !== "completed" && brief.status !== "returned_to_ua"
+  const isUrgent = mounted && daysUntilDeadline >= 0 && daysUntilDeadline <= 3 && brief.status !== "completed" && brief.status !== "returned_to_ua"
 
   return (
     <div

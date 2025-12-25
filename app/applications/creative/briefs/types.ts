@@ -45,6 +45,22 @@ export interface Brief {
     requestedAt: string
     requirements?: string
   }
+  // NEW: Linked Concepts tracking
+  linkedConcepts?: LinkedConceptSummary[]
+  conceptCount?: number
+  totalOrderCount?: number
+  totalDeliverableCount?: number
+}
+
+// NEW: Summary of linked concept for Brief view
+export interface LinkedConceptSummary {
+  conceptId: string
+  conceptTitle: string
+  status: string  // Concept status
+  uaApprovalStatus?: 'pending' | 'approved' | 'rejected'
+  orderCount: number
+  createdAt: string
+  createdBy: string
 }
 
 // ============================================
@@ -303,16 +319,22 @@ export type PriorityConfigMap = Record<Priority, PriorityConfig>
 // ============================================
 export const STATUS_OPTIONS: StatusFilterOption[] = [
   { value: "all", label: "Tất cả status", color: "gray" },
+  // === Workflow Order ===
+  // 1. Khởi tạo
   { value: "draft", label: "Nháp", color: "gray" },
   { value: "pending", label: "Chờ nhận", color: "yellow" },
+  // 2. Đang thực hiện
   { value: "confirmed", label: "Đã xác nhận", color: "blue" },
   { value: "in_progress", label: "Đang thực hiện", color: "blue" },
+  // 3. Design workflow
   { value: "waiting_design", label: "Chờ Design", color: "purple" },
-  { value: "design_returned", label: "Design trả về", color: "orange" },
   { value: "design_done", label: "Design Done", color: "cyan" },
+  { value: "design_returned", label: "Design trả về", color: "orange" },
+  // 4. Review workflow
+  { value: "need_revision", label: "Cần chỉnh sửa", color: "orange" },
   { value: "waiting_lead_review", label: "Chờ Lead duyệt", color: "indigo" },
   { value: "waiting_ua_review", label: "Chờ UA nghiệm thu", color: "teal" },
-  { value: "need_revision", label: "Cần chỉnh sửa", color: "orange" },
+  // 5. Kết thúc
   { value: "completed", label: "Hoàn thành", color: "green" },
   { value: "returned_to_ua", label: "Trả về UA", color: "red" },
 ]

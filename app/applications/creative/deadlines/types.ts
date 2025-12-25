@@ -10,7 +10,13 @@ export type TaskStatus =
   | 'completed'
   | 'overdue'
 
-export type TaskType = 'brief' | 'concept' | 'asset' | 'review'
+export type TaskType = 'brief' | 'concept' | 'asset' | 'review' | 'order'
+
+// Source of the task (for integration with Brief/Concept modules)
+export type TaskSource = 'brief' | 'order' | 'standalone'
+
+// Team types for order assignments
+export type OrderTeamType = 'design' | 'art_stylist' | 'ai_producer'
 
 export type NotificationType =
   | 'deadline_reminder'
@@ -89,6 +95,17 @@ export interface Task {
   comments?: Comment[]
   versionHistory?: Version[]
   relatedTasks?: string[] // IDs of related tasks
+
+  // NEW: Integration with Brief & Concept modules
+  source?: TaskSource           // Where this task originated
+  conceptId?: string            // Link to Concept (for order tasks)
+  orderId?: string              // Link to specific Order assignment
+  teamType?: OrderTeamType      // Team handling this task (Design/Art/AI)
+  briefStatus?: string          // Current Brief status
+  conceptStatus?: string        // Current Concept status
+  orderStatus?: 'pending' | 'in_progress' | 'returned' | 'completed'
+  linkedBriefTitle?: string     // Brief title for display
+  linkedConceptTitle?: string   // Concept title for display
 }
 
 export interface Notification {
@@ -149,6 +166,7 @@ export const TYPE_CONFIG: Record<TaskType, { label: string; color: string; icon:
   concept: { label: "Concept", color: "bg-purple-100 text-purple-700", icon: "💡", badgeClass: "bg-gradient-to-r from-purple-400 to-violet-400 text-white border-0 shadow-sm" },
   asset: { label: "Asset", color: "bg-blue-100 text-blue-700", icon: "🎨", badgeClass: "bg-gradient-to-r from-blue-400 to-cyan-400 text-white border-0 shadow-sm" },
   review: { label: "Review", color: "bg-green-100 text-green-700", icon: "👁️", badgeClass: "bg-gradient-to-r from-green-400 to-emerald-400 text-white border-0 shadow-sm" },
+  order: { label: "Order", color: "bg-cyan-100 text-cyan-700", icon: "📦", badgeClass: "bg-gradient-to-r from-cyan-400 to-teal-400 text-white border-0 shadow-sm" },
 }
 
 export const NOTIFICATION_CONFIG: Record<NotificationType, { label: string; icon: string; color: string; priority: NotificationPriority }> = {

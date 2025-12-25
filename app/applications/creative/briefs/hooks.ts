@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { initialBriefs } from "./mockData"
 import type { Brief, CreateBriefFormData, ConfirmBriefFormData, TeamMember } from "./types"
+import { calculateBriefStatusFromConcepts, calculateConceptProgress, type ConceptProgressSummary } from "../shared/workflowTypes"
 
 // ============================================
 // SIMPLE USER (No role complexity)
@@ -33,18 +34,18 @@ export function useBriefs() {
     const status: Brief["status"] = isDraft ? "draft" : "pending"
     const priority: Brief["priority"] = "medium"
     const platform: Brief["platform"] = data.platform || "iOS"
-    
+
     const newBrief: Brief = {
       id: `brief-${Date.now()}`,
       title: data.title,
       appCampaign: data.appCampaign || "",
-      kpiTargets: data.kpiTargets 
+      kpiTargets: data.kpiTargets
         ? {
-            ctr: Number(data.kpiTargets.ctr) || 0,
-            cvr: Number(data.kpiTargets.cvr) || 0,
-            cpi: Number(data.kpiTargets.cpi) || 0,
-            roas: Number(data.kpiTargets.roas) || 0,
-          }
+          ctr: Number(data.kpiTargets.ctr) || 0,
+          cvr: Number(data.kpiTargets.cvr) || 0,
+          cpi: Number(data.kpiTargets.cpi) || 0,
+          roas: Number(data.kpiTargets.roas) || 0,
+        }
         : { ctr: 0, cvr: 0, cpi: 0, roas: 0 },
       deadline: data.deadline,
       region: data.region || "",
@@ -141,12 +142,12 @@ export function useBriefs() {
           } else {
             updatedBrief = {
               ...brief,
-              status: "refunded",
-              refundReason: data.refundReason,
+              status: "returned_to_ua",
+              returnReason: data.refundReason,
               activityLog: [
                 ...brief.activityLog,
                 {
-                  action: `Refund brief với lý do: ${data.refundReason}`,
+                  action: `Trả về UA với lý do: ${data.refundReason}`,
                   by: confirmerName,
                   at: new Date().toISOString(),
                 },
@@ -166,6 +167,36 @@ export function useBriefs() {
     return updatedBrief
   }
 
+  // ============================================
+  // NEW: Sync Brief status from linked Concepts
+  // ============================================
+  const syncBriefStatusFromConcepts = async (
+    briefId: string,
+    conceptStatuses: string[],
+    syncedBy: string = "System"
+  ): Promise<Brief | null> => {
+    const newStatus = calculateBriefStatusFromConcepts(conceptStatuses)
+    if (!newStatus) return null
+
+    const brief = briefs.find(b => b.id === briefId)
+    if (!brief) return null
+
+    // Don't update if status is already the same
+    if (brief.status === newStatus) return brief
+
+    return updateBriefStatus(briefId, { status: newStatus as Brief["status"] }, syncedBy)
+  }
+
+  // Get concept progress for a Brief
+  const getBriefConceptProgress = (briefId: string): ConceptProgressSummary | null => {
+    const brief = briefs.find(b => b.id === briefId)
+    if (!brief || !brief.linkedConcepts || brief.linkedConcepts.length === 0) {
+      return null
+    }
+    const statuses = brief.linkedConcepts.map(c => c.status)
+    return calculateConceptProgress(statuses)
+  }
+
   return {
     briefs,
     isLoading,
@@ -174,5 +205,8 @@ export function useBriefs() {
     createBrief,
     updateBriefStatus,
     confirmBrief,
+    // NEW: Sync functions
+    syncBriefStatusFromConcepts,
+    getBriefConceptProgress,
   }
 }

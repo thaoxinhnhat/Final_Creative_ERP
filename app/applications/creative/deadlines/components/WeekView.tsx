@@ -212,6 +212,32 @@ export function WeekView({ tasks, onSelectTask, selectedTask }: WeekViewProps) {
                                                             <span className="line-clamp-2 leading-tight font-semibold">{task.title}</span>
                                                         </div>
 
+                                                        {/* Source badge (Brief/Order) */}
+                                                        {task.source && task.source !== 'standalone' && (
+                                                            <div className="flex items-center gap-1 mb-1">
+                                                                <Badge className={cn(
+                                                                    "text-[9px] px-1.5 py-0 h-4",
+                                                                    task.source === 'brief'
+                                                                        ? "bg-pink-100 text-pink-700 border-pink-200"
+                                                                        : "bg-cyan-100 text-cyan-700 border-cyan-200"
+                                                                )}>
+                                                                    {task.source === 'brief' ? '📄 Brief' : '📦 Order'}
+                                                                </Badge>
+                                                                {/* Team badge for Order tasks */}
+                                                                {task.source === 'order' && task.teamType && (
+                                                                    <Badge className={cn(
+                                                                        "text-[9px] px-1.5 py-0 h-4",
+                                                                        task.teamType === 'design' ? "bg-purple-100 text-purple-700" :
+                                                                            task.teamType === 'art_stylist' ? "bg-pink-100 text-pink-700" :
+                                                                                "bg-cyan-100 text-cyan-700"
+                                                                    )}>
+                                                                        {task.teamType === 'design' ? '🎨' :
+                                                                            task.teamType === 'art_stylist' ? '📸' : '✨'}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        )}
+
                                                         {/* Priority badge */}
                                                         <div className="flex items-center gap-1 mt-1.5">
                                                             {getPriorityBadge(task.priority)}
@@ -316,6 +342,18 @@ export function WeekView({ tasks, onSelectTask, selectedTask }: WeekViewProps) {
                     <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-gradient-to-r from-green-400 to-green-200 border border-green-400" />
                         <span>Hoàn thành</span>
+                    </div>
+                    <div className="h-4 w-px bg-gray-300 mx-2" />
+                    <div className="flex items-center gap-2">
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-pink-100 text-pink-700">📄 Brief</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-cyan-100 text-cyan-700">📦 Order</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-purple-100 text-purple-700">🎨 Design</Badge>
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-pink-100 text-pink-700">📸 Art</Badge>
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-cyan-100 text-cyan-700">✨ AI</Badge>
                     </div>
                 </div>
             </div>

@@ -25,7 +25,7 @@ import {
   StatsSection,
   WeekView,
 } from "./components"
-import type { Task, TaskStatus, TaskPriority } from "./types"
+import type { Task, TaskStatus, TaskPriority, TaskSource, OrderTeamType } from "./types"
 import { mockTasks, teamMembers, mockNotifications, calculateWorkloadSummary } from "./mockData"
 import {
   DropdownMenu,
@@ -34,6 +34,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 
 export default function DeadlinePage() {
   const router = useRouter()
@@ -48,6 +53,9 @@ export default function DeadlinePage() {
   const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>([])
   const [selectedPriorities, setSelectedPriorities] = useState<TaskPriority[]>([])
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
+  // NEW: Source and Team filters
+  const [selectedSource, setSelectedSource] = useState<TaskSource | 'all'>('all')
+  const [selectedTeam, setSelectedTeam] = useState<OrderTeamType | 'all'>('all')
 
   // Calculate workload
   const workload = useMemo(() => calculateWorkloadSummary(), [])
@@ -90,8 +98,19 @@ export default function DeadlinePage() {
         return true
       })
     }
+
+    // NEW: Source filter (Brief/Order)
+    if (selectedSource !== 'all') {
+      tasks = tasks.filter(t => t.source === selectedSource)
+    }
+
+    // NEW: Team filter (only applies to Order tasks)
+    if (selectedTeam !== 'all') {
+      tasks = tasks.filter(t => t.source !== 'order' || t.teamType === selectedTeam)
+    }
+
     return tasks
-  }, [selectedStatuses, selectedPriorities, selectedAssignees, selectedDateRange])
+  }, [selectedStatuses, selectedPriorities, selectedAssignees, selectedDateRange, selectedSource, selectedTeam])
 
   const activeFilterCount =
     selectedStatuses.length +
@@ -119,6 +138,8 @@ export default function DeadlinePage() {
     setSelectedPriorities([])
     setSelectedAssignees([])
     setSelectedDateRange('all')
+    setSelectedSource('all')
+    setSelectedTeam('all')
   }
 
   // Handle bell click - open notifications sidebar
@@ -186,7 +207,7 @@ export default function DeadlinePage() {
             </Button>
             <div className="h-6 w-px bg-gray-200" />
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold">
                 Deadline & Notification Center
               </h1>
               <p className="text-xs text-muted-foreground">
@@ -277,73 +298,114 @@ export default function DeadlinePage() {
         )}
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex">
-        {/* Filter Panel */}
-        {showFilters && viewMode !== 'stats' && (
-          <FilterPanel
-            selectedStatuses={selectedStatuses}
-            selectedPriorities={selectedPriorities}
-            selectedAssignees={selectedAssignees}
-            onToggleStatus={handleToggleStatus}
-            onTogglePriority={handleTogglePriority}
-            onToggleAssignee={handleToggleAssignee}
-            onClearAll={handleClearAll}
-            teamMembers={teamMembers.map(m => ({ id: m.id, name: m.name }))}
-            selectedDateRange={selectedDateRange}
-            onSelectDateRange={setSelectedDateRange}
-          />
-        )}
+      {/* Main Content with Resizable Panels */}
+      <div className="flex-1 overflow-hidden">
+        {viewMode === 'stats' ? (
+          /* Stats view doesn't need resizable panels */
+          <div className="h-full overflow-auto p-4">
+            <StatsSection
+              tasks={filteredTasks}
+              workload={workload}
+            />
+          </div>
+        ) : (
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="h-full"
+            key={showFilters ? 'with-filter' : 'without-filter'}
+          >
+            {/* Filter Panel */}
+            {showFilters && (
+              <>
+                <ResizablePanel
+                  id="filter-panel"
+                  defaultSize={15}
+                  minSize={12}
+                  maxSize={25}
+                  className="bg-white border-r"
+                >
+                  <FilterPanel
+                    selectedStatuses={selectedStatuses}
+                    selectedPriorities={selectedPriorities}
+                    selectedAssignees={selectedAssignees}
+                    onToggleStatus={handleToggleStatus}
+                    onTogglePriority={handleTogglePriority}
+                    onToggleAssignee={handleToggleAssignee}
+                    onClearAll={handleClearAll}
+                    teamMembers={teamMembers.map(m => ({ id: m.id, name: m.name }))}
+                    selectedDateRange={selectedDateRange}
+                    onSelectDateRange={setSelectedDateRange}
+                    selectedSource={selectedSource}
+                    onSelectSource={setSelectedSource}
+                    selectedTeam={selectedTeam}
+                    onSelectTeam={setSelectedTeam}
+                  />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+              </>
+            )}
 
-        {/* Main View Area */}
-        <div className="flex-1 overflow-auto relative">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Loader2 className="animate-spin h-10 w-10 text-blue-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Đang tải...</p>
+            {/* Main Calendar/List View */}
+            <ResizablePanel
+              id="main-view-panel"
+              defaultSize={showFilters ? 55 : 70}
+              minSize={40}
+              className="bg-gray-50"
+            >
+              <div className="h-full overflow-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Loader2 className="animate-spin h-10 w-10 text-blue-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Đang tải...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {viewMode === 'week' && (
+                      <WeekView
+                        tasks={filteredTasks}
+                        onSelectTask={handleSelectTask}
+                        selectedTask={selectedTask}
+                      />
+                    )}
+                    {viewMode === 'calendar' && (
+                      <CalendarView
+                        onSelectTask={handleSelectTask}
+                        tasks={filteredTasks}
+                        selectedTask={selectedTask}
+                        loading={loading}
+                      />
+                    )}
+                    {viewMode === 'list' && (
+                      <ListView
+                        onSelectTask={handleSelectTask}
+                        tasks={filteredTasks}
+                      />
+                    )}
+                  </>
+                )}
               </div>
-            </div>
-          ) : (
-            <>
-              {viewMode === 'week' && (
-                <WeekView
-                  tasks={filteredTasks}
-                  onSelectTask={handleSelectTask}
-                  selectedTask={selectedTask}
-                />
-              )}
-              {viewMode === 'calendar' && (
-                <CalendarView
-                  onSelectTask={handleSelectTask}
-                  tasks={filteredTasks}
-                  selectedTask={selectedTask}
-                  loading={loading}
-                />
-              )}
-              {viewMode === 'list' && (
-                <ListView
-                  onSelectTask={handleSelectTask}
-                  tasks={filteredTasks}
-                />
-              )}
-              {viewMode === 'stats' && (
-                <StatsSection
-                  tasks={filteredTasks}
-                  workload={workload}
-                />
-              )}
-            </>
-          )}
-        </div>
+            </ResizablePanel>
 
-        {/* Right Sidebar - Task Detail & Notifications */}
-        {viewMode !== 'stats' && (
-          <RightSidebar
-            selectedTask={selectedTask}
-            activeTab={sidebarTab}
-            onTabChange={setSidebarTab}
-          />
+            {/* Resize Handle between Calendar and Detail */}
+            <ResizableHandle withHandle />
+
+            {/* Right Sidebar - Task Detail & Notifications */}
+            <ResizablePanel
+              id="detail-panel"
+              defaultSize={30}
+              minSize={20}
+              maxSize={45}
+              className="bg-white border-l"
+            >
+              <RightSidebar
+                selectedTask={selectedTask}
+                activeTab={sidebarTab}
+                onTabChange={setSidebarTab}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         )}
       </div>
     </div>

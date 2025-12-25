@@ -3,7 +3,7 @@
 // ============================================
 export type AssetType = 'image' | 'video' | 'document' | 'template' | 'other'
 
-export type AssetCategory = 
+export type AssetCategory =
   | 'final_creative'
   | 'reference'
   | 'brand_asset'
@@ -27,6 +27,7 @@ export interface Asset {
   campaignName?: string
   appName?: string
   briefId?: string
+  conceptId?: string  // NEW: Link to concept
   uploadedBy: string
   uploadedAt: string
   updatedAt: string
@@ -53,6 +54,7 @@ export interface UploadAssetFormData {
   campaignName?: string
   appName?: string
   briefId?: string
+  conceptId?: string  // NEW: Link to concept
 }
 
 // ============================================

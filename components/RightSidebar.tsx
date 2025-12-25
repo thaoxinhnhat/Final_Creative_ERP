@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Bell, CheckCircle, Clock, User } from "lucide-react"
-import type { Task, Notification } from "../app/applications/creative/deadline/types"
+import type { Task, Notification } from "../app/applications/creative/deadlines/types"
 
 // Demo notifications
 const mockNotifications: Notification[] = [
@@ -73,7 +73,7 @@ interface RightSidebarProps {
 
 export function RightSidebar({ selectedTask }: RightSidebarProps) {
   const notifications: Notification[] = mockNotifications
-  
+
   return (
     <div className="w-[380px] border-l bg-white overflow-y-auto">
       <Tabs defaultValue="task" className="w-full">
@@ -89,7 +89,7 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
             )}
           </TabsTrigger>
         </TabsList>
-        
+
         {/* Task Detail Tab */}
         <TabsContent value="task" className="p-4">
           {selectedTask ? (
@@ -98,22 +98,22 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
                 <h3 className="font-semibold text-lg mb-2">{selectedTask.title}</h3>
                 <Badge variant="secondary">{selectedTask.status}</Badge>
               </div>
-              
+
               <Separator />
-              
+
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">App:</span>
                   <p className="font-medium">{selectedTask.appName}</p>
                 </div>
-                
+
                 {selectedTask.campaignName && (
                   <div>
                     <span className="text-muted-foreground">Campaign:</span>
                     <p className="font-medium">{selectedTask.campaignName}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <span className="text-muted-foreground">Deadline:</span>
                   <p className="font-medium flex items-center gap-1">
@@ -121,32 +121,32 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
                     {new Date(selectedTask.deadline).toLocaleDateString('vi-VN')}
                   </p>
                 </div>
-                
+
                 <div>
                   <span className="text-muted-foreground">Priority:</span>
                   <Badge variant="outline">{selectedTask.priority}</Badge>
                 </div>
-                
+
                 <div>
                   <span className="text-muted-foreground">Assigned to:</span>
                   <div className="flex gap-2 mt-2">
-                    {selectedTask.assignedTo.map((_, i) => (
+                    {selectedTask.assignedTo.map((_: string, i: number) => (
                       <div key={i} className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback>U{i+1}</AvatarFallback>
+                          <AvatarFallback>U{i + 1}</AvatarFallback>
                         </Avatar>
                       </div>
                     ))}
                   </div>
                 </div>
-                
+
                 {selectedTask.description && (
                   <div>
                     <span className="text-muted-foreground">Description:</span>
                     <p className="mt-1">{selectedTask.description}</p>
                   </div>
                 )}
-                
+
                 {/* Progress */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -154,16 +154,16 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
                     <span className="font-medium">{selectedTask.progress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-blue-600 h-2 rounded-full"
                       style={{ width: `${selectedTask.progress}%` }}
                     />
                   </div>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="space-y-2">
                 <Button className="w-full">View Brief</Button>
                 <Button variant="outline" className="w-full">Update Status</Button>
@@ -175,7 +175,7 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
             </div>
           )}
         </TabsContent>
-        
+
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="p-4">
           <div className="space-y-3">
@@ -183,9 +183,8 @@ export function RightSidebar({ selectedTask }: RightSidebarProps) {
               notifications.map(notif => (
                 <div
                   key={notif.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition ${
-                    !notif.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                  }`}
+                  className={`p-3 rounded-lg border cursor-pointer transition ${!notif.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <Bell className={`h-5 w-5 flex-shrink-0 ${!notif.isRead ? 'text-blue-600' : 'text-muted-foreground'}`} />

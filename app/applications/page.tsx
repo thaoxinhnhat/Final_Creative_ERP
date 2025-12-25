@@ -87,7 +87,7 @@ const teamsData: Team[] = [
       },
       {
         id: "creative-concepts",
-        name: "Concept & Idea Hub",
+        name: "Concept & Order Management",
         description: "Brainstorm và quản lý ý tưởng sáng tạo",
         icon: Target,
         color: "bg-purple-500",
@@ -95,9 +95,19 @@ const teamsData: Team[] = [
         lastUpdated: "2024-01-19",
       },
       {
+        id: "creative-asset-product",
+        name: "Asset Product Management",
+        description: "Shortcut đến ERP Report (Product) của Creative Team",
+        icon: Package,
+        color: "bg-teal-500",
+        externalUrl: "#", // BE sẽ liên kết URL ERP Report sau
+        isExternal: true,
+        lastUpdated: "2024-01-23",
+      },
+      {
         id: "creative-library",
         name: "Asset Management",
-        description: "Quản lý, lưu trữ hình ảnh & video dùng trong Creative",
+        description: "Quản lý, lưu trữ hình ảnh & video dùng trong Creative Team",
         icon: ImageIcon,
         color: "bg-blue-500",
         favorite: true,
@@ -106,8 +116,8 @@ const teamsData: Team[] = [
       },
       {
         id: "creative-performance",
-        name: "Performance Tracking",
-        description: "Theo dõi hiệu suất creative",
+        name: "Performance Tracking & Analysis",
+        description: "Theo dõi hiệu suất",
         icon: TrendingUp,
         color: "bg-orange-500",
         route: "/applications/creative/performance",
@@ -115,8 +125,8 @@ const teamsData: Team[] = [
       },
       {
         id: "creative-deadlines",
-        name: "Deadline & Notification",
-        description: "Quản lý deadline và workload",
+        name: "Deadline & Notification Management",
+        description: "Quản lý deadline và workload của Creative",
         icon: CalendarIcon,
         color: "bg-red-500",
         route: "/applications/creative/deadlines",
@@ -659,7 +669,7 @@ export default function ApplicationsPage() {
 
 
 
-{/* Content */}
+        {/* Content */}
         <div className="space-y-8">
           {searchTerm && (
             <div className="mb-4">

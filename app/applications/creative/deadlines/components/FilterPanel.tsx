@@ -5,10 +5,25 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { X, CalendarDays, Filter, User, Flag, Layers, Check } from "lucide-react"
-import type { TaskStatus, TaskPriority } from "../types"
+import { X, CalendarDays, Filter, User, Flag, Layers, Check, FileText, Users, Palette, Camera, Sparkles } from "lucide-react"
+import type { TaskStatus, TaskPriority, TaskSource, OrderTeamType } from "../types"
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "../types"
 import { cn } from "@/lib/utils"
+
+// Source filter config
+const SOURCE_CONFIG = {
+  all: { label: "Tất cả", icon: "📋", color: "text-gray-600" },
+  brief: { label: "Brief", icon: "📄", color: "text-pink-600" },
+  order: { label: "Order", icon: "📦", color: "text-cyan-600" },
+}
+
+// Team filter config
+const TEAM_CONFIG = {
+  all: { label: "Tất cả", icon: <Users className="h-4 w-4" />, color: "text-gray-600" },
+  design: { label: "Design", icon: <Palette className="h-4 w-4" />, color: "text-purple-600" },
+  art_stylist: { label: "Art & Stylist", icon: <Camera className="h-4 w-4" />, color: "text-pink-600" },
+  ai_producer: { label: "AI Producer", icon: <Sparkles className="h-4 w-4" />, color: "text-cyan-600" },
+}
 
 interface FilterPanelProps {
   selectedStatuses: TaskStatus[]
@@ -21,6 +36,11 @@ interface FilterPanelProps {
   teamMembers: { id: string; name: string }[]
   selectedDateRange?: string
   onSelectDateRange?: (range: string) => void
+  // NEW: Source and Team filters
+  selectedSource?: TaskSource | 'all'
+  onSelectSource?: (source: TaskSource | 'all') => void
+  selectedTeam?: OrderTeamType | 'all'
+  onSelectTeam?: (team: OrderTeamType | 'all') => void
 }
 
 export function FilterPanel({
@@ -34,15 +54,21 @@ export function FilterPanel({
   teamMembers,
   selectedDateRange,
   onSelectDateRange,
+  selectedSource = 'all',
+  onSelectSource,
+  selectedTeam = 'all',
+  onSelectTeam,
 }: FilterPanelProps) {
   const [localDateRange, setLocalDateRange] = useState<string | undefined>(selectedDateRange)
   const activeCount =
     selectedStatuses.length +
     selectedPriorities.length +
-    selectedAssignees.length
+    selectedAssignees.length +
+    (selectedSource !== 'all' ? 1 : 0) +
+    (selectedTeam !== 'all' ? 1 : 0)
 
   return (
-    <div className="w-[280px] border-r bg-gradient-to-b from-white to-gray-50 shadow-lg overflow-y-auto">
+    <div className="h-full border-r bg-gradient-to-b from-white to-gray-50 shadow-lg overflow-y-auto">
       <div className="p-4 space-y-7">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
@@ -107,6 +133,82 @@ export function FilterPanel({
           </div>
         </div>
         <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
+
+        {/* Source Filter (Brief/Order) */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="h-4 w-4 text-pink-400" />
+            <Label className="text-base font-semibold">Nguồn</Label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'brief', 'order'] as const).map((source) => {
+              const config = SOURCE_CONFIG[source]
+              const isSelected = selectedSource === source
+              return (
+                <Button
+                  key={source}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "flex-1 transition-colors duration-200 rounded-lg",
+                    isSelected
+                      ? source === 'brief' ? "bg-pink-600 hover:bg-pink-700 text-white"
+                        : source === 'order' ? "bg-cyan-600 hover:bg-cyan-700 text-white"
+                          : "bg-gray-600 hover:bg-gray-700 text-white"
+                      : "hover:bg-gray-50"
+                  )}
+                  onClick={() => onSelectSource?.(source)}
+                >
+                  <span className="mr-1">{config.icon}</span>
+                  {config.label}
+                </Button>
+              )
+            })}
+          </div>
+        </div>
+        <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
+
+        {/* Team Filter (Design/Art/AI) - Only show when Order source is selected */}
+        {(selectedSource === 'order' || selectedSource === 'all') && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-purple-400" />
+              <Label className="text-base font-semibold">Team</Label>
+            </div>
+            <div className="space-y-2">
+              {(['all', 'design', 'art_stylist', 'ai_producer'] as const).map((team) => {
+                const config = TEAM_CONFIG[team]
+                const isSelected = selectedTeam === team
+                return (
+                  <div
+                    className={cn(
+                      "flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200",
+                      isSelected ? "bg-purple-50 border border-purple-200" : "hover:bg-gray-50"
+                    )}
+                    key={team}
+                    onClick={() => onSelectTeam?.(team)}
+                  >
+                    <div className={cn(
+                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200",
+                      isSelected
+                        ? "bg-purple-600 border-purple-600"
+                        : "border-gray-300 bg-white"
+                    )}>
+                      {isSelected && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                    </div>
+                    <Label className="ml-2 text-sm cursor-pointer flex items-center gap-1.5">
+                      <span className={config.color}>{config.icon}</span>
+                      <span className={isSelected ? "font-medium" : ""}>{config.label}</span>
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        {(selectedSource === 'order' || selectedSource === 'all') && (
+          <Separator className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 my-2" />
+        )}
 
         {/* Status Filter */}
         <div>

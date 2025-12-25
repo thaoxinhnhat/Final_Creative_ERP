@@ -30,6 +30,7 @@ export default function ConceptHubPage() {
         filters,
         isLoading,
         stats,
+        statsByHandler,
         updateFilters,
         resetFilters,
         createConcept,
@@ -46,7 +47,7 @@ export default function ConceptHubPage() {
     const handleCreateConcept = (data: Partial<Concept>) => {
         const newConcept = createConcept({
             ...data,
-            createdBy: "1",
+            createdBy: "c-1",
             createdByName: "Nguyễn Văn An",
         })
         toast({
@@ -78,9 +79,13 @@ export default function ConceptHubPage() {
         }
     }
 
-    const handleSendToDesign = (notes: string) => {
+    const handleSendToDesign = (notes: string, deadline?: string) => {
         if (selectedConcept) {
-            sendToDesign(selectedConcept.id, notes)
+            // Use provided deadline, or brief deadline, or default to 7 days from now
+            const orderDeadline = deadline ||
+                selectedConcept.linkedBrief?.deadline ||
+                new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            sendToDesign(selectedConcept.id, notes, orderDeadline)
             setSelectedConcept(prev => prev ? { ...prev, status: 'sent_to_design', designNotes: notes } : null)
             toast({
                 title: "Đã gửi sang Design",
@@ -106,7 +111,7 @@ export default function ConceptHubPage() {
             // Optimistic update for selected concept
             const newComment = {
                 id: `cmt_${Date.now()}`,
-                userId: "1",
+                userId: "c-1",
                 userName: "Nguyễn Văn An",
                 content,
                 createdAt: new Date().toISOString()
@@ -141,7 +146,7 @@ export default function ConceptHubPage() {
                         <div>
                             <h1 className="text-xl font-bold flex items-center gap-2">
                                 <Lightbulb className="h-5 w-5 text-yellow-500" />
-                                Concept & Idea Hub
+                                Concept & Order
                             </h1>
                             <p className="text-xs text-muted-foreground">
                                 Quản lý brainstorm, concept và duyệt ý tưởng
@@ -149,12 +154,14 @@ export default function ConceptHubPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        {/* Quick Stats */}
+                        {/* Quick Stats - Enhanced */}
                         <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
                             <span>📝 {stats.draft} nháp</span>
                             <span>⏳ {stats.pending_review} chờ duyệt</span>
-                            <span>✅ {stats.approved} đã duyệt</span>
-                            <span>🎨 {stats.sent_to_design} gửi Design</span>
+                            <span>🎨 {statsByHandler.design} Design</span>
+                            <span>🖌️ {statsByHandler.art_stylist} Art</span>
+                            <span>🤖 {statsByHandler.ai_producer} AI</span>
+                            <span>🎉 {stats.completed} xong</span>
                         </div>
                         <Separator orientation="vertical" className="h-6 hidden md:block" />
                         <Button onClick={() => setShowConceptForm(true)}>
@@ -173,6 +180,7 @@ export default function ConceptHubPage() {
                     onUpdateFilters={updateFilters}
                     onResetFilters={resetFilters}
                     stats={stats}
+                    statsByHandler={statsByHandler}
                 />
 
                 {/* Center: Concept List */}
