@@ -16,15 +16,15 @@ interface AssetGridProps {
   onSortChange: (sortBy: AssetFilters['sortBy']) => void
 }
 
-export function AssetGrid({ 
-  assets, 
-  viewMode, 
-  isLoading, 
-  selectedId, 
-  onSelectAsset, 
-  onDownload, 
-  sortBy, 
-  onSortChange 
+export function AssetGrid({
+  assets,
+  viewMode,
+  isLoading,
+  selectedId,
+  onSelectAsset,
+  onDownload,
+  sortBy,
+  onSortChange
 }: AssetGridProps) {
   if (isLoading) {
     return (
@@ -35,7 +35,7 @@ export function AssetGrid({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 p-6">
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-gray-950 p-6">
       {/* Header with count and sort */}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">

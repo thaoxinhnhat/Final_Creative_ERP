@@ -1,50 +1,148 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Upload, Grid, List, FolderOpen, Image, FileText, Video, Package } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  ArrowLeft,
+  Upload,
+  Grid,
+  List,
+  FolderOpen,
+  Image as ImageIcon,
+  FileText,
+  Layers,
+  Clock,
+  BarChart3,
+  ChevronDown,
+  HardDrive,
+  FileArchive,
+  GripVertical
+} from "lucide-react"
 import { useRouter } from "next/navigation"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
-import type { Asset, AssetFilters } from "./types"
+import type { Asset, AssetFilters, WorkflowStage } from "./types"
 import { useAssets } from "./hooks"
 import { FilterPanel } from "./components/FilterPanel"
 import { AssetGrid } from "./components/AssetGrid"
 import { AssetDetail } from "./components/AssetDetail"
 import { UploadModal } from "./components/UploadModal"
+import { KanbanBoard } from "./components/KanbanBoard"
+import { TimelineView } from "./components/TimelineView"
+import { PerformanceDashboard } from "./components/PerformanceDashboard"
+
+type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline' | 'dashboard'
+type LibraryType = 'media' | 'document'
+
+const VIEW_CONFIG: Record<ViewMode, { label: string; icon: React.ReactNode }> = {
+  grid: { label: "Grid", icon: <Grid className="h-4 w-4" /> },
+  list: { label: "List", icon: <List className="h-4 w-4" /> },
+  kanban: { label: "Kanban", icon: <Layers className="h-4 w-4" /> },
+  timeline: { label: "Timeline", icon: <Clock className="h-4 w-4" /> },
+  dashboard: { label: "Dashboard", icon: <BarChart3 className="h-4 w-4" /> },
+}
+
+const LIBRARY_CONFIG: Record<LibraryType, {
+  label: string
+  icon: React.ReactNode
+  types: string[]
+}> = {
+  media: {
+    label: "Media Library",
+    icon: <HardDrive className="h-4 w-4" />,
+    types: ['image', 'video', 'playable', 'endcard']
+  },
+  document: {
+    label: "Document Library",
+    icon: <FileArchive className="h-4 w-4" />,
+    types: ['document', 'template', 'other']
+  }
+}
+
+// Min/max widths for resizable panels
+const FILTER_MIN_WIDTH = 200
+const FILTER_MAX_WIDTH = 400
+const FILTER_DEFAULT_WIDTH = 280
+
+const DETAIL_MIN_WIDTH = 300
+const DETAIL_MAX_WIDTH = 500
+const DETAIL_DEFAULT_WIDTH = 380
 
 export default function CreativeLibraryPage() {
   const router = useRouter()
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [libraryType, setLibraryType] = useState<LibraryType>('media')
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+
+  // Resizable panel widths
+  const [filterWidth, setFilterWidth] = useState(FILTER_DEFAULT_WIDTH)
+  const [detailWidth, setDetailWidth] = useState(DETAIL_DEFAULT_WIDTH)
+  const [isResizingFilter, setIsResizingFilter] = useState(false)
+  const [isResizingDetail, setIsResizingDetail] = useState(false)
 
   const {
     assets,
+    allAssets,
     filters,
     isLoading,
     updateFilters,
     resetFilters,
     toggleTypeFilter,
     toggleCategoryFilter,
+    toggleWorkflowFilter,
+    toggleNetworkFilter,
     uploadAssets,
     deleteAsset,
     incrementViews,
     incrementDownloads,
     activeFilterCount,
+    importFromDrive,
+    updateWorkflowStage,
+    assetsByWorkflow,
+    updateUATestStatus,
+    setNetworkStatus,
+    performanceStats,
+    updateDeploymentStatus,
+    updateLiveNetworks,
+    updateDriveInfo,
+    removeDriveLink,
   } = useAssets()
 
+  // Derive selectedAsset from allAssets to keep it in sync after updates
+  const selectedAsset = selectedAssetId
+    ? allAssets.find(a => a.id === selectedAssetId) || null
+    : null
+
+  // Filter assets by library type
+  const libraryAssets = assets.filter(asset =>
+    LIBRARY_CONFIG[libraryType].types.includes(asset.type)
+  )
+
   const handleSelectAsset = (asset: Asset) => {
-    setSelectedAsset(asset)
+    setSelectedAssetId(asset.id)
     incrementViews(asset.id)
   }
 
   const handleDownload = (asset: Asset) => {
     incrementDownloads(asset.id)
-    const link = document.createElement('a')
-    link.href = asset.fileUrl
-    link.download = asset.name
-    link.click()
+    if (asset.driveUrl) {
+      window.open(asset.driveUrl, '_blank')
+    } else {
+      const link = document.createElement('a')
+      link.href = asset.fileUrl
+      link.download = asset.name
+      link.click()
+    }
   }
 
   const handleUpload = async (formData: any) => {
@@ -52,18 +150,73 @@ export default function CreativeLibraryPage() {
     setUploadModalOpen(false)
   }
 
-  const handleDelete = (assetId: string) => {
-    deleteAsset(assetId)
-    setSelectedAsset(null)
+  const handleImportFromDrive = async (driveUrl: string) => {
+    const asset = await importFromDrive(driveUrl)
+    if (asset) {
+      setSelectedAssetId(asset.id)
+    }
   }
 
-  // Quick stats
-  const stats = {
-    images: assets.filter(a => a.type === 'image').length,
-    videos: assets.filter(a => a.type === 'video').length,
-    documents: assets.filter(a => a.type === 'document').length,
-    others: assets.filter(a => ['template', 'other'].includes(a.type)).length,
+  const handleDelete = (assetId: string) => {
+    deleteAsset(assetId)
+    setSelectedAssetId(null)
   }
+
+  const handleMoveAsset = (assetId: string, newStage: WorkflowStage) => {
+    updateWorkflowStage(assetId, newStage)
+  }
+
+  // Resize handlers for Filter Panel
+  const handleFilterResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizingFilter(true)
+
+    const startX = e.clientX
+    const startWidth = filterWidth
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - startX
+      const newWidth = Math.min(FILTER_MAX_WIDTH, Math.max(FILTER_MIN_WIDTH, startWidth + diff))
+      setFilterWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setIsResizingFilter(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [filterWidth])
+
+  // Resize handlers for Detail Panel
+  const handleDetailResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizingDetail(true)
+
+    const startX = e.clientX
+    const startWidth = detailWidth
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diff = startX - e.clientX
+      const newWidth = Math.min(DETAIL_MAX_WIDTH, Math.max(DETAIL_MIN_WIDTH, startWidth + diff))
+      setDetailWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setIsResizingDetail(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [detailWidth])
+
+  // Count by library type
+  const mediaCount = allAssets.filter(a => LIBRARY_CONFIG.media.types.includes(a.type)).length
+  const documentCount = allAssets.filter(a => LIBRARY_CONFIG.document.types.includes(a.type)).length
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
@@ -79,54 +232,60 @@ export default function CreativeLibraryPage() {
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 <FolderOpen className="h-5 w-5 text-blue-600" />
-                Asset Management
+                Smart Asset Management
               </h1>
-              <p className="text-xs text-muted-foreground">Kho lưu trữ tập trung cho tất cả creative assets</p>
+              <p className="text-xs text-muted-foreground">
+                Quản lý assets với tham chiếu tới kho lưu trữ bên ngoài
+              </p>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
-            {/* Quick Stats */}
-            <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Image className="h-3.5 w-3.5 text-green-600" />
-                {stats.images} ảnh
-              </span>
-              <span className="flex items-center gap-1">
-                <Video className="h-3.5 w-3.5 text-purple-600" />
-                {stats.videos} video
-              </span>
-              <span className="flex items-center gap-1">
-                <FileText className="h-3.5 w-3.5 text-red-600" />
-                {stats.documents} tài liệu
-              </span>
-              <span className="flex items-center gap-1">
-                <Package className="h-3.5 w-3.5 text-orange-600" />
-                {stats.others} khác
-              </span>
-            </div>
-            <Separator orientation="vertical" className="h-6 hidden md:block" />
+            {/* Library Type Tabs */}
+            <Tabs value={libraryType} onValueChange={(v) => setLibraryType(v as LibraryType)}>
+              <TabsList className="h-9">
+                <TabsTrigger value="media" className="gap-2 text-xs px-3">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Media
+                  <Badge variant="secondary" className="ml-1 text-[10px]">{mediaCount}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="document" className="gap-2 text-xs px-3">
+                  <FileText className="h-3.5 w-3.5" />
+                  Documents
+                  <Badge variant="secondary" className="ml-1 text-[10px]">{documentCount}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <Separator orientation="vertical" className="h-6" />
+
             {/* View Mode Toggle */}
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="rounded-r-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-l-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {VIEW_CONFIG[viewMode].icon}
+                  {VIEW_CONFIG[viewMode].label}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.entries(VIEW_CONFIG).map(([mode, config]) => (
+                  <DropdownMenuItem
+                    key={mode}
+                    onClick={() => setViewMode(mode as ViewMode)}
+                    className="gap-2"
+                  >
+                    {config.icon}
+                    {config.label}
+                    {mode === viewMode && <Badge className="ml-auto text-xs">Active</Badge>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button onClick={() => setUploadModalOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
-              Upload Assets
+              {libraryType === 'media' ? 'Import từ Drive' : 'Thêm tài liệu'}
             </Button>
           </div>
         </div>
@@ -134,36 +293,110 @@ export default function CreativeLibraryPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex">
-        {/* Left: Filter Panel */}
-        <FilterPanel
-          filters={filters}
-          onUpdateFilters={updateFilters}
-          onResetFilters={resetFilters}
-          onToggleType={toggleTypeFilter}
-          onToggleCategory={toggleCategoryFilter}
-          activeFilterCount={activeFilterCount}
-        />
+        {/* Left: Resizable Filter Panel */}
+        {!['dashboard', 'kanban'].includes(viewMode) && (
+          <div
+            className="flex-shrink-0 flex"
+            style={{ width: filterWidth }}
+          >
+            <div className="flex-1 overflow-hidden">
+              <FilterPanel
+                filters={filters}
+                onUpdateFilters={updateFilters}
+                onResetFilters={resetFilters}
+                onToggleType={toggleTypeFilter}
+                onToggleCategory={toggleCategoryFilter}
+                onToggleWorkflow={toggleWorkflowFilter}
+                onToggleNetwork={toggleNetworkFilter}
+                activeFilterCount={activeFilterCount}
+              />
+            </div>
+            {/* Resize Handle */}
+            <div
+              className={cn(
+                "w-1 cursor-col-resize hover:bg-blue-400 transition-colors flex items-center justify-center group",
+                isResizingFilter ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"
+              )}
+              onMouseDown={handleFilterResize}
+            >
+              <GripVertical className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </div>
+        )}
 
-        {/* Center: Asset Grid */}
-        <AssetGrid
-          assets={assets}
-          viewMode={viewMode}
-          isLoading={isLoading}
-          selectedId={selectedAsset?.id || null}
-          onSelectAsset={handleSelectAsset}
-          onDownload={handleDownload}
-          sortBy={filters.sortBy}
-          onSortChange={(sortBy: AssetFilters['sortBy']) => updateFilters({ sortBy })}
-        />
+        {/* Center: Main View */}
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'grid' || viewMode === 'list' ? (
+            <AssetGrid
+              assets={libraryAssets}
+              viewMode={viewMode}
+              isLoading={isLoading}
+              selectedId={selectedAsset?.id || null}
+              onSelectAsset={handleSelectAsset}
+              onDownload={handleDownload}
+              sortBy={filters.sortBy}
+              onSortChange={(sortBy: AssetFilters['sortBy']) => updateFilters({ sortBy })}
+            />
+          ) : viewMode === 'kanban' ? (
+            <div className="h-full overflow-auto p-4">
+              <KanbanBoard
+                assetsByWorkflow={assetsByWorkflow}
+                onMoveAsset={handleMoveAsset}
+                onSelectAsset={handleSelectAsset}
+                selectedId={selectedAsset?.id}
+              />
+            </div>
+          ) : viewMode === 'timeline' ? (
+            <div className="h-full overflow-auto">
+              <TimelineView
+                assets={libraryAssets}
+                onSelectAsset={handleSelectAsset}
+                selectedId={selectedAsset?.id}
+              />
+            </div>
+          ) : viewMode === 'dashboard' ? (
+            <div className="h-full overflow-auto">
+              <PerformanceDashboard
+                assets={allAssets}
+                performanceStats={performanceStats}
+                assetsByWorkflow={assetsByWorkflow}
+              />
+            </div>
+          ) : null}
+        </div>
 
-        {/* Right: Asset Detail Sidebar */}
-        {selectedAsset && (
-          <AssetDetail
-            asset={selectedAsset}
-            onClose={() => setSelectedAsset(null)}
-            onDownload={() => handleDownload(selectedAsset)}
-            onDelete={() => handleDelete(selectedAsset.id)}
-          />
+        {/* Right: Resizable Asset Detail Sidebar */}
+        {selectedAsset && viewMode !== 'dashboard' && (
+          <div
+            className="flex-shrink-0 flex"
+            style={{ width: detailWidth }}
+          >
+            {/* Resize Handle */}
+            <div
+              className={cn(
+                "w-1 cursor-col-resize hover:bg-blue-400 transition-colors flex items-center justify-center group",
+                isResizingDetail ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"
+              )}
+              onMouseDown={handleDetailResize}
+            >
+              <GripVertical className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <AssetDetail
+                asset={selectedAsset}
+                onClose={() => setSelectedAssetId(null)}
+                onDownload={() => handleDownload(selectedAsset)}
+                onDelete={() => handleDelete(selectedAsset.id)}
+                onUpdateUAStatus={(updates) => updateUATestStatus(selectedAsset.id, updates)}
+                onSetNetworkStatus={(network, rating) => setNetworkStatus(selectedAsset.id, network, rating)}
+                onUpdateDeployment={(status, reason) => updateDeploymentStatus(selectedAsset.id, status, reason)}
+                onUpdateLiveNetworks={(networks) => updateLiveNetworks(selectedAsset.id, networks)}
+                onUpdateDriveInfo={(driveUrl) => updateDriveInfo(selectedAsset.id, driveUrl)}
+                onRemoveDriveLink={() => removeDriveLink(selectedAsset.id)}
+                isUpdatingDrive={isLoading}
+              />
+            </div>
+          </div>
         )}
       </div>
 
@@ -172,6 +405,7 @@ export default function CreativeLibraryPage() {
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
         onUpload={handleUpload}
+        onImportFromDrive={handleImportFromDrive}
       />
     </div>
   )

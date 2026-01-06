@@ -28,7 +28,7 @@ import {
   FileText,
   Package,
   FolderKanban,
-  Calendar as CalendarIcon,
+
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -75,35 +75,7 @@ const teamsData: Team[] = [
     description: "Asset production and creative management tools",
     color: "pink",
     applications: [
-      {
-        id: "creative-briefs",
-        name: "Brief & Task Management",
-        description: "Quản lý brief từ UA Team và phân công task",
-        icon: FileText,
-        color: "bg-pink-500",
-        favorite: true,
-        route: "/applications/creative/briefs",
-        lastUpdated: "2024-01-20",
-      },
-      {
-        id: "creative-concepts",
-        name: "Concept & Order Management",
-        description: "Brainstorm và quản lý ý tưởng sáng tạo",
-        icon: Target,
-        color: "bg-purple-500",
-        route: "/applications/creative/concepts",
-        lastUpdated: "2024-01-19",
-      },
-      {
-        id: "creative-asset-product",
-        name: "Asset Product Management",
-        description: "Shortcut đến ERP Report (Product) của Creative Team",
-        icon: Package,
-        color: "bg-teal-500",
-        externalUrl: "#", // BE sẽ liên kết URL ERP Report sau
-        isExternal: true,
-        lastUpdated: "2024-01-23",
-      },
+
       {
         id: "creative-library",
         name: "Asset Management",
@@ -123,15 +95,7 @@ const teamsData: Team[] = [
         route: "/applications/creative/performance",
         lastUpdated: "2024-01-16",
       },
-      {
-        id: "creative-deadlines",
-        name: "Deadline & Notification Management",
-        description: "Quản lý deadline và workload của Creative",
-        icon: CalendarIcon,
-        color: "bg-red-500",
-        route: "/applications/creative/deadlines",
-        lastUpdated: "2024-01-15",
-      },
+
     ],
   },
   {
