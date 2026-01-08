@@ -185,6 +185,7 @@ export interface Asset {
   tags: string[]
   campaignName?: string
   appName?: string
+  assetPlatform?: 'app' | 'game'  // Whether this asset belongs to App or Game
   briefId?: string
   briefName?: string  // Display name of the Brief this asset belongs to
   conceptId?: string
@@ -245,6 +246,28 @@ export interface Asset {
   playableUrl?: string
   endcardUrl?: string
   landingPageUrl?: string
+
+  // ============================================
+  // NEW: Production Team
+  // ============================================
+  productionTeam?: string
+
+  // ============================================
+  // NEW: Themes (separate from tags)
+  // ============================================
+  themes?: string[]
+
+  // ============================================
+  // NEW: Date Tracking with Metadata
+  // ============================================
+  uploadSource?: 'user_upload' | 'erp_report' | 'drive_import'
+  uploadedByTeam?: string
+
+  finalizedAt?: string
+  finalizedBy?: string
+  finalizedByTeam?: string
+
+  liveAt?: string
 }
 
 // ============================================
@@ -270,6 +293,9 @@ export interface AssetFilters {
 
   // NEW: Deployment filters
   deploymentStatuses?: DeploymentStatus[]
+
+  // NEW: Custom filters (from settings)
+  customFilters?: string[]
 }
 
 // ============================================
@@ -282,12 +308,18 @@ export interface UploadAssetFormData {
   tags: string[]
   campaignName?: string
   appName?: string
+  assetPlatform?: 'app' | 'game'
   briefId?: string
   conceptId?: string
 
   // NEW: Workflow
   workflowStage?: WorkflowStage
   team?: CreativeTeam
+
+  // NEW: Production Team & Themes
+  productionTeam?: string
+  themes?: string[]
+  youtubeUrl?: string
 
   // NEW: From Drive
   driveUrl?: string

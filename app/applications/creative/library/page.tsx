@@ -19,7 +19,8 @@ import {
   ChevronDown,
   HardDrive,
   FileArchive,
-  GripVertical
+  GripVertical,
+  UserCog
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
@@ -39,6 +40,7 @@ import { UploadModal } from "./components/UploadModal"
 import { KanbanBoard } from "./components/KanbanBoard"
 import { TimelineView } from "./components/TimelineView"
 import { PerformanceDashboard } from "./components/PerformanceDashboard"
+import { useFilterSettings } from "./components/FilterSettingsModal"
 
 type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline' | 'dashboard'
 type LibraryType = 'media' | 'document'
@@ -90,6 +92,12 @@ export default function CreativeLibraryPage() {
   const [isResizingFilter, setIsResizingFilter] = useState(false)
   const [isResizingDetail, setIsResizingDetail] = useState(false)
 
+  // User role for testing (UA team can Confirm Live, Creative cannot, Admin can edit settings)
+  const [userRole, setUserRole] = useState<'ua_team' | 'creative_team' | 'admin'>('creative_team')
+
+  // Filter settings
+  const { settings: filterSettings, saveSettings: saveFilterSettings } = useFilterSettings()
+
   const {
     assets,
     allAssets,
@@ -124,9 +132,12 @@ export default function CreativeLibraryPage() {
     : null
 
   // Filter assets by library type
-  const libraryAssets = assets.filter(asset =>
-    LIBRARY_CONFIG[libraryType].types.includes(asset.type)
-  )
+  // For documents: ignore workflow filter, show all documents
+  // For media: apply workflow filter as normal
+  const libraryAssets = libraryType === 'document'
+    ? allAssets.filter(asset => LIBRARY_CONFIG[libraryType].types.includes(asset.type))
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+    : assets.filter(asset => LIBRARY_CONFIG[libraryType].types.includes(asset.type))
 
   const handleSelectAsset = (asset: Asset) => {
     setSelectedAssetId(asset.id)
@@ -283,6 +294,36 @@ export default function CreativeLibraryPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Role Selector for Testing */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className={cn(
+                  "gap-2",
+                  userRole === 'admin' ? "border-red-500 text-red-700" :
+                    userRole === 'ua_team' ? "border-purple-500 text-purple-700" :
+                      "border-orange-500 text-orange-700"
+                )}>
+                  <UserCog className="h-4 w-4" />
+                  {userRole === 'admin' ? 'Admin' : userRole === 'ua_team' ? 'UA Team' : 'Creative Team'}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setUserRole('creative_team')} className="gap-2">
+                  🎨 Creative Team
+                  {userRole === 'creative_team' && <Badge className="ml-auto text-xs">Active</Badge>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setUserRole('ua_team')} className="gap-2">
+                  📊 UA Team
+                  {userRole === 'ua_team' && <Badge className="ml-auto text-xs">Active</Badge>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setUserRole('admin')} className="gap-2">
+                  🔧 Admin
+                  {userRole === 'admin' && <Badge className="ml-auto text-xs">Active</Badge>}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button onClick={() => setUploadModalOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
               {libraryType === 'media' ? 'Import từ Drive' : 'Thêm tài liệu'}
@@ -309,6 +350,9 @@ export default function CreativeLibraryPage() {
                 onToggleWorkflow={toggleWorkflowFilter}
                 onToggleNetwork={toggleNetworkFilter}
                 activeFilterCount={activeFilterCount}
+                filterSettings={filterSettings}
+                onSaveFilterSettings={saveFilterSettings}
+                userRole={userRole}
               />
             </div>
             {/* Resize Handle */}
@@ -365,39 +409,7 @@ export default function CreativeLibraryPage() {
           ) : null}
         </div>
 
-        {/* Right: Resizable Asset Detail Sidebar */}
-        {selectedAsset && viewMode !== 'dashboard' && (
-          <div
-            className="flex-shrink-0 flex"
-            style={{ width: detailWidth }}
-          >
-            {/* Resize Handle */}
-            <div
-              className={cn(
-                "w-1 cursor-col-resize hover:bg-blue-400 transition-colors flex items-center justify-center group",
-                isResizingDetail ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"
-              )}
-              onMouseDown={handleDetailResize}
-            >
-              <GripVertical className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <AssetDetail
-                asset={selectedAsset}
-                onClose={() => setSelectedAssetId(null)}
-                onDownload={() => handleDownload(selectedAsset)}
-                onDelete={() => handleDelete(selectedAsset.id)}
-                onUpdateUAStatus={(updates) => updateUATestStatus(selectedAsset.id, updates)}
-                onSetNetworkStatus={(network, rating) => setNetworkStatus(selectedAsset.id, network, rating)}
-                onUpdateDeployment={(status, reason) => updateDeploymentStatus(selectedAsset.id, status, reason)}
-                onUpdateLiveNetworks={(networks) => updateLiveNetworks(selectedAsset.id, networks)}
-                onUpdateDriveInfo={(driveUrl) => updateDriveInfo(selectedAsset.id, driveUrl)}
-                onRemoveDriveLink={() => removeDriveLink(selectedAsset.id)}
-                isUpdatingDrive={isLoading}
-              />
-            </div>
-          </div>
-        )}
+        {/* Right: Asset Detail removed - now using popup */}
       </div>
 
       {/* Upload Modal */}
@@ -407,6 +419,24 @@ export default function CreativeLibraryPage() {
         onUpload={handleUpload}
         onImportFromDrive={handleImportFromDrive}
       />
+
+      {/* Asset Detail Popup */}
+      <AssetDetail
+        asset={selectedAsset}
+        open={!!selectedAsset}
+        onOpenChange={(open) => { if (!open) setSelectedAssetId(null) }}
+        onDownload={() => selectedAsset && handleDownload(selectedAsset)}
+        onDelete={() => selectedAsset && handleDelete(selectedAsset.id)}
+        onUpdateUAStatus={(updates) => selectedAsset && updateUATestStatus(selectedAsset.id, updates)}
+        onSetNetworkStatus={(network, rating) => selectedAsset && setNetworkStatus(selectedAsset.id, network, rating)}
+        onUpdateDeployment={(status, reason) => selectedAsset && updateDeploymentStatus(selectedAsset.id, status, reason)}
+        onUpdateLiveNetworks={(networks) => selectedAsset && updateLiveNetworks(selectedAsset.id, networks)}
+        onUpdateDriveInfo={(driveUrl) => selectedAsset ? updateDriveInfo(selectedAsset.id, driveUrl) : Promise.resolve(false)}
+        onRemoveDriveLink={() => selectedAsset && removeDriveLink(selectedAsset.id)}
+        isUpdatingDrive={isLoading}
+        userRole={userRole}
+      />
     </div>
   )
 }
+

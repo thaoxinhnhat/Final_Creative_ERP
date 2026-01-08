@@ -419,7 +419,38 @@ export function generateVideoThumbnail(videoUrl: string): string {
 
 /**
  * Validate Google Drive URL
+ * Accepts any link containing drive.google.com or docs.google.com
+ * Supports with or without protocol (http://, https://)
  */
 export function isValidDriveUrl(url: string): boolean {
-    return parseGoogleDriveUrl(url) !== null
+    if (!url || !url.trim()) return false
+
+    const trimmedUrl = url.trim().toLowerCase()
+
+    // Add protocol if missing for URL parsing
+    let urlToCheck = trimmedUrl
+    if (!urlToCheck.startsWith('http://') && !urlToCheck.startsWith('https://')) {
+        urlToCheck = 'https://' + urlToCheck
+    }
+
+    try {
+        const urlObj = new URL(urlToCheck)
+        const hostname = urlObj.hostname
+
+        // Accept any Google Drive or Google Docs related domains
+        return (
+            hostname.includes('drive.google.com') ||
+            hostname.includes('docs.google.com') ||
+            hostname.includes('sheets.google.com') ||
+            hostname.includes('slides.google.com')
+        )
+    } catch {
+        // If URL parsing fails, just check if it contains the domain
+        return (
+            trimmedUrl.includes('drive.google.com') ||
+            trimmedUrl.includes('docs.google.com') ||
+            trimmedUrl.includes('sheets.google.com') ||
+            trimmedUrl.includes('slides.google.com')
+        )
+    }
 }

@@ -13,10 +13,16 @@ import { isValidDriveUrl, parseGoogleDriveUrl, getMockDriveFileInfo, parseAssetI
 interface DriveImportTabProps {
     onImport: (driveUrl: string) => Promise<void>
     isLoading?: boolean
+    driveUrl?: string
+    onDriveUrlChange?: (url: string) => void
 }
 
-export function DriveImportTab({ onImport, isLoading = false }: DriveImportTabProps) {
-    const [driveUrl, setDriveUrl] = useState("")
+export function DriveImportTab({ onImport, isLoading = false, driveUrl: externalDriveUrl, onDriveUrlChange }: DriveImportTabProps) {
+    // Use external state if provided, otherwise use internal state
+    const [internalDriveUrl, setInternalDriveUrl] = useState("")
+    const driveUrl = externalDriveUrl !== undefined ? externalDriveUrl : internalDriveUrl
+    const setDriveUrl = onDriveUrlChange || setInternalDriveUrl
+
     const [fileInfo, setFileInfo] = useState<DriveFileInfo | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isFetching, setIsFetching] = useState(false)
@@ -34,22 +40,12 @@ export function DriveImportTab({ onImport, isLoading = false }: DriveImportTabPr
             return
         }
 
-        // Fetch file info
-        setIsFetching(true)
-        try {
-            const parsed = parseGoogleDriveUrl(url)
-            if (parsed) {
-                const info = await getMockDriveFileInfo(parsed.fileId)
-                setFileInfo(info)
-            }
-        } catch (err) {
-            setError("Failed to fetch file info")
-        } finally {
-            setIsFetching(false)
-        }
+        // Don't auto-fetch file info, just validate
+        setError(null)
     }
 
     const handlePaste = (e: React.ClipboardEvent) => {
+        e.preventDefault()
         const pastedText = e.clipboardData.getData('text')
         handleUrlChange(pastedText)
     }

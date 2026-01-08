@@ -47,6 +47,22 @@ export function AssetCard({ asset, viewMode = 'grid', isSelected = false, onClic
   const goodCount = Object.values(ratings).filter(r => r === 'good').length
   const badCount = Object.values(ratings).filter(r => r === 'bad').length
 
+  // Smart date display based on workflow stage
+  const getDisplayDate = (): { date: string; label: string; colorClass: string } => {
+    const isLive = asset.deploymentStatus === 'live' && asset.liveNetworks && asset.liveNetworks.length > 0
+    const isFinal = asset.workflowStage === 'final' || asset.category === 'final_creative'
+
+    if (isLive && asset.liveAt) {
+      return { date: asset.liveAt, label: 'Live', colorClass: 'text-green-600 bg-green-50' }
+    }
+    if (isFinal && asset.finalizedAt) {
+      return { date: asset.finalizedAt, label: 'Final', colorClass: 'text-blue-600 bg-blue-50' }
+    }
+    return { date: asset.uploadedAt || asset.updatedAt, label: '', colorClass: '' }
+  }
+
+  const displayDate = getDisplayDate()
+
   if (viewMode === 'list') {
     return (
       <div
@@ -291,9 +307,10 @@ export function AssetCard({ asset, viewMode = 'grid', isSelected = false, onClic
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-1">
+          <span className={cn("flex items-center gap-1 px-1 rounded", displayDate.colorClass)}>
             <Clock className="h-2.5 w-2.5" />
-            {formatDate(asset.updatedAt)}
+            {displayDate.label && <span className="font-medium">{displayDate.label}:</span>}
+            {formatDate(displayDate.date)}
           </span>
           {asset.currentOwner && (
             <span className="flex items-center gap-1">

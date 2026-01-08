@@ -13,10 +13,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import type { Asset, AdNetwork, DeploymentStatus, PerformanceRating, UATestStatus } from "../types"
 import { AD_NETWORK_CONFIG, ALL_AD_NETWORKS, DEPLOYMENT_STATUS_CONFIG, PERFORMANCE_RATING_CONFIG } from "../types"
-import { Check, X, FlaskConical, Circle, AlertTriangle } from "lucide-react"
+import { Check, X, FlaskConical, Circle, AlertTriangle, CheckCircle2 } from "lucide-react"
 
 interface UATestingPanelProps {
     asset: Asset
@@ -25,6 +33,7 @@ interface UATestingPanelProps {
     onUpdateDeployment: (status: DeploymentStatus, stopReason?: string) => void
     onUpdateLiveNetworks: (networks: AdNetwork[]) => void
     compact?: boolean
+    userRole?: 'ua_team' | 'creative_team'  // For role-based access control
 }
 
 export function UATestingPanel({
@@ -34,14 +43,56 @@ export function UATestingPanel({
     onUpdateDeployment,
     onUpdateLiveNetworks,
     compact = false,
+    userRole = 'creative_team',  // Default to Creative (no Confirm Live access)
 }: UATestingPanelProps) {
     const [stopReason, setStopReason] = useState(asset.stopReason || "")
     const [showStopReason, setShowStopReason] = useState(false)
+
+    // Confirmation dialog state
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean
+        title: string
+        description: string
+        action: () => void
+    }>({ open: false, title: "", description: "", action: () => { } })
 
     const uaStatus = asset.uaTestStatus || {
         isPlanned: false,
         testedNetworks: [],
         performanceRating: {},
+    }
+
+    // Check if asset is finalized (can go live)
+    const isFinalized = asset.workflowStage === 'final'
+
+    // Check if there are test results (Good or Bad)
+    const performanceRatings = Object.values(uaStatus.performanceRating || {})
+    const goodCount = performanceRatings.filter(r => r === 'good').length
+    const badCount = performanceRatings.filter(r => r === 'bad').length
+    const testingCount = performanceRatings.filter(r => r === 'testing').length
+    const hasTestingResults = goodCount > 0 || badCount > 0
+
+    // Can confirm live if: UA team + finalized + testing status + has results
+    const canConfirmLive = userRole === 'ua_team' &&
+        isFinalized &&
+        asset.deploymentStatus === 'testing' &&
+        hasTestingResults
+
+    // Show confirmation dialog helper
+    const showConfirm = (title: string, description: string, action: () => void) => {
+        setConfirmDialog({ open: true, title, description, action })
+    }
+
+    // Handle Confirm Live action
+    const handleConfirmLive = () => {
+        showConfirm(
+            "Xác nhận chuyển sang Live chính thức?",
+            `Asset đã hoàn thành testing với ${goodCount} network Good, ${badCount} network Bad. Bạn có muốn chuyển sang trạng thái Live chính thức không?`,
+            () => {
+                onUpdateDeployment('live')
+                setConfirmDialog({ ...confirmDialog, open: false })
+            }
+        )
     }
 
     const handleTestPlanToggle = (checked: boolean) => {
@@ -86,7 +137,18 @@ export function UATestingPanel({
 
     const toggleLiveNetwork = (network: AdNetwork) => {
         const current = asset.liveNetworks || []
-        const updated = current.includes(network)
+        const isRemoving = current.includes(network)
+
+        // Check if asset is finalized before allowing to go live
+        if (!isRemoving) {
+            const isFinalized = asset.workflowStage === 'final'
+            if (!isFinalized) {
+                alert('Asset phải được nghiệm thu (Final) trước khi có thể đưa lên Live!')
+                return
+            }
+        }
+
+        const updated = isRemoving
             ? current.filter(n => n !== network)
             : [...current, network]
         onUpdateLiveNetworks(updated)
@@ -227,13 +289,16 @@ export function UATestingPanel({
                                 </div>
 
                                 {/* Live Toggle */}
-                                <div className="flex items-center gap-1 mt-2">
+                                <div className="flex items-center gap-1 mt-2" title={!isFinalized ? "Asset phải được Final trước khi Live" : ""}>
                                     <Checkbox
                                         checked={isLive}
                                         onCheckedChange={() => toggleLiveNetwork(network)}
                                         className="h-3 w-3"
+                                        disabled={!isFinalized && !isLive}
                                     />
-                                    <span className="text-[10px] text-muted-foreground">Live</span>
+                                    <span className={cn("text-[10px]", !isFinalized ? "text-gray-400" : "text-muted-foreground")}>
+                                        Live {!isFinalized && "(cần Final)"}
+                                    </span>
                                 </div>
                             </div>
                         )
@@ -316,17 +381,76 @@ export function UATestingPanel({
             <div className="flex items-center gap-4 pt-2 border-t text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                     <Check className="h-3 w-3 text-green-500" />
-                    {Object.values(uaStatus.performanceRating || {}).filter(r => r === 'good').length} Good
+                    {goodCount} Good
                 </span>
                 <span className="flex items-center gap-1">
                     <X className="h-3 w-3 text-red-500" />
-                    {Object.values(uaStatus.performanceRating || {}).filter(r => r === 'bad').length} Bad
+                    {badCount} Bad
                 </span>
                 <span className="flex items-center gap-1">
                     <FlaskConical className="h-3 w-3 text-yellow-500" />
-                    {Object.values(uaStatus.performanceRating || {}).filter(r => r === 'testing').length} Testing
+                    {testingCount} Testing
                 </span>
             </div>
+
+            {/* Confirm Live Button - Only show when testing with results */}
+            {asset.deploymentStatus === 'testing' && (
+                <div className="pt-3 border-t">
+                    <Button
+                        className={cn(
+                            "w-full",
+                            canConfirmLive
+                                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                                : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        )}
+                        disabled={!canConfirmLive}
+                        onClick={handleConfirmLive}
+                    >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Confirm Live Chính Thức
+                        {!canConfirmLive && userRole !== 'ua_team' && (
+                            <span className="ml-2 text-xs opacity-75">
+                                (Chỉ UA Team)
+                            </span>
+                        )}
+                        {!canConfirmLive && userRole === 'ua_team' && !hasTestingResults && (
+                            <span className="ml-2 text-xs opacity-75">
+                                (Cần có kết quả Good/Bad)
+                            </span>
+                        )}
+                    </Button>
+                    {userRole !== 'ua_team' && (
+                        <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Chỉ UA Team mới có quyền Confirm Live
+                        </p>
+                    )}
+                    {!isFinalized && userRole === 'ua_team' && (
+                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Asset cần được Final trước khi Confirm Live
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Confirmation Dialog */}
+            <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{confirmDialog.title}</DialogTitle>
+                        <DialogDescription>{confirmDialog.description}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
+                            Hủy
+                        </Button>
+                        <Button onClick={confirmDialog.action}>
+                            Xác nhận
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

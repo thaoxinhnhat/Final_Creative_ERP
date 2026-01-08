@@ -17,470 +17,14 @@ export function getBriefName(briefId?: string): string | undefined {
 }
 
 // ============================================
-// ENHANCED MOCK ASSETS WITH NEW FIELDS
+// GENERATED 100 TEST ASSETS WITH PROPER DISTRIBUTION
+// - 20 assets per workflow stage (brief, review, final, test, stopped)
+// - Logical deployment status per stage
+// - New date tracking fields (finalizedAt, liveAt, uploadSource)
+// - Only final stage assets can go live
 // ============================================
 
-export const mockAssets: Asset[] = [
-  {
-    id: "asset_001",
-    name: "SP01-GCVAI-ThuyBT-0001.mp4",
-    type: "video",
-    category: "final_creative",
-    fileUrl: "/assets/summer-hero.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/orig1/400/400",
-    fileSize: 45678900,
-    fileExtension: "mp4",
-    description: "Hero video for Summer 2025 campaign - 30s version for TikTok/Reels",
-    tags: ["summer-2025", "hero-video", "ios", "30s", "vertical", "project:SP01", "team:GCVAI"],
-    campaignName: "Summer Campaign 2025",
-    appName: "Fashion App",
-    uploadedBy: "ThuyBT",
-    uploadedAt: "2024-12-01T10:00:00Z",
-    updatedAt: "2024-12-20T10:00:00Z",
-    status: "active",
-    downloads: 12,
-    views: 45,
-    // NEW FIELDS
-    driveUrl: "https://drive.google.com/file/d/1abc123xyz/view",
-    driveFileId: "1abc123xyz",
-    workflowStage: "test",
-    currentOwner: "ThuyBT",
-    parsedAssetId: "SP01-GCVAI-ThuyBT-0001",
-    projectCode: "SP01",
-    teamCode: "GCVAI",
-    creatorCode: "ThuyBT",
-    sequenceNumber: "0001",
-    team: "creative",
-    isCreativeAI: true,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: ["google", "meta", "tiktok"],
-      performanceRating: {
-        google: "good",
-        meta: "good",
-        tiktok: "testing",
-      },
-    },
-    deploymentStatus: "live",
-    liveNetworks: ["google", "meta"],
-    briefId: "brief_001",
-  },
-  {
-    id: "asset_002",
-    name: "SP02-DSG-AnhNT-0023.png",
-    type: "image",
-    category: "final_creative",
-    fileUrl: "/assets/brand-logo.png",
-    thumbnailUrl: "https://picsum.photos/seed/orig2/400/400",
-    fileSize: 234500,
-    fileExtension: "png",
-    description: "Gaming app banner - High performance design",
-    tags: ["logo", "brand", "primary", "transparent", "project:SP02", "team:DSG"],
-    uploadedBy: "AnhNT",
-    uploadedAt: "2024-11-15T09:00:00Z",
-    updatedAt: "2024-12-15T09:00:00Z",
-    status: "active",
-    downloads: 89,
-    views: 234,
-    // NEW FIELDS
-    workflowStage: "test",
-    currentOwner: "AnhNT",
-    parsedAssetId: "SP02-DSG-AnhNT-0023",
-    projectCode: "SP02",
-    teamCode: "DSG",
-    creatorCode: "AnhNT",
-    sequenceNumber: "0023",
-    team: "design",
-    isCreativeAI: false,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: ["meta", "axon", "unity"],
-      performanceRating: {
-        meta: "good",
-        axon: "testing",
-        unity: "bad",
-      },
-    },
-    deploymentStatus: "testing",
-    briefId: "brief_002",
-  },
-  {
-    id: "asset_003",
-    name: "SP01-VID-MinhPT-0015.mov",
-    type: "video",
-    category: "final_creative",
-    fileUrl: "/assets/product-template.mov",
-    thumbnailUrl: "https://picsum.photos/seed/orig3/400/400",
-    fileSize: 12890000,
-    fileExtension: "mov",
-    description: "Product showcase video - vertical format",
-    tags: ["template", "product", "creative", "vertical", "project:SP01", "team:VID"],
-    campaignName: "Product Launch",
-    uploadedBy: "MinhPT",
-    uploadedAt: "2024-11-20T14:30:00Z",
-    updatedAt: "2024-12-10T14:30:00Z",
-    status: "active",
-    downloads: 34,
-    views: 78,
-    // NEW FIELDS
-    workflowStage: "review",
-    currentOwner: "MinhPT",
-    parsedAssetId: "SP01-VID-MinhPT-0015",
-    projectCode: "SP01",
-    teamCode: "VID",
-    creatorCode: "MinhPT",
-    sequenceNumber: "0015",
-    team: "creative",
-    isCreativeAI: false,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: [],
-      performanceRating: {},
-    },
-    deploymentStatus: "draft",
-    briefId: "brief_001",
-  },
-  {
-    id: "asset_004",
-    name: "competitor-analysis-q4.pdf",
-    type: "document",
-    category: "reference",
-    fileUrl: "/assets/competitor-analysis.pdf",
-    fileSize: 5670000,
-    fileExtension: "pdf",
-    thumbnailUrl: "https://picsum.photos/seed/orig4/400/400",
-    description: "Q4 2024 competitor creative analysis - 50+ examples analyzed",
-    tags: ["reference", "competitor", "q4-2024", "analysis"],
-    campaignName: "Market Research",
-    uploadedBy: "UA Team",
-    uploadedAt: "2024-10-25T11:00:00Z",
-    updatedAt: "2024-10-25T11:00:00Z",
-    status: "active",
-    downloads: 23,
-    views: 56,
-    // NEW FIELDS
-    workflowStage: "final",
-    team: "creative",
-  },
-  {
-    id: "asset_005",
-    name: "SP03-GCVAI-LoanNT-0042.jpg",
-    type: "image",
-    category: "final_creative",
-    fileUrl: "/assets/winter-banner.jpg",
-    thumbnailUrl: "https://picsum.photos/seed/orig5/400/400",
-    fileSize: 890000,
-    fileExtension: "jpg",
-    description: "Winter sale vertical banner for Instagram/Facebook Stories",
-    tags: ["winter-sale", "banner", "stories", "9:16", "vertical", "project:SP03", "ai-generated"],
-    campaignName: "Winter Sale 2024",
-    appName: "Shopping App",
-    uploadedBy: "LoanNT",
-    uploadedAt: "2024-12-10T08:00:00Z",
-    updatedAt: "2024-12-18T08:00:00Z",
-    status: "active",
-    downloads: 8,
-    views: 23,
-    // NEW FIELDS
-    driveUrl: "https://drive.google.com/file/d/2def456abc/view",
-    driveFileId: "2def456abc",
-    workflowStage: "test",
-    currentOwner: "LoanNT",
-    parsedAssetId: "SP03-GCVAI-LoanNT-0042",
-    projectCode: "SP03",
-    teamCode: "GCVAI",
-    creatorCode: "LoanNT",
-    sequenceNumber: "0042",
-    team: "creative",
-    isCreativeAI: true,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: ["google", "meta", "mintegral", "axon"],
-      performanceRating: {
-        google: "good",
-        meta: "good",
-        mintegral: "good",
-        axon: "bad",
-      },
-    },
-    deploymentStatus: "live",
-    liveNetworks: ["google", "meta", "mintegral"],
-    briefId: "brief_003",
-  },
-  {
-    id: "asset_006",
-    name: "app-promo-15s.mp4",
-    type: "video",
-    category: "final_creative",
-    fileUrl: "/assets/app-promo-15s.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/orig6/400/400",
-    fileSize: 15890000,
-    fileExtension: "mp4",
-    description: "15-second app promo optimized for TikTok and Reels",
-    tags: ["promo", "15s", "tiktok", "reels", "vertical", "app-launch"],
-    campaignName: "App Launch 2025",
-    appName: "Fitness App",
-    briefId: "brief_001",
-    uploadedBy: "Creative Team",
-    uploadedAt: "2024-12-15T16:00:00Z",
-    updatedAt: "2024-12-15T16:00:00Z",
-    status: "active",
-    downloads: 15,
-    views: 67,
-    // NEW FIELDS
-    workflowStage: "brief",
-    team: "creative",
-  },
-  {
-    id: "asset_007",
-    name: "brand-guidelines-2025.pdf",
-    type: "document",
-    category: "brand_asset",
-    fileUrl: "/assets/brand-guidelines.pdf",
-    fileSize: 8900000,
-    fileExtension: "pdf",
-    thumbnailUrl: "https://picsum.photos/seed/orig7/400/400",
-    description: "Official brand guidelines for 2025 - colors, fonts, usage rules",
-    tags: ["brand", "guidelines", "2025", "official"],
-    uploadedBy: "Brand Team",
-    uploadedAt: "2024-12-01T09:00:00Z",
-    updatedAt: "2024-12-01T09:00:00Z",
-    status: "active",
-    downloads: 156,
-    views: 423,
-    // NEW FIELDS
-    workflowStage: "final",
-    team: "design",
-  },
-  {
-    id: "asset_008",
-    name: "SP02-VID-HoangPT-0008.mov",
-    type: "video",
-    category: "raw_footage",
-    fileUrl: "/assets/raw-beach.mov",
-    thumbnailUrl: "https://picsum.photos/seed/orig8/400/400",
-    fileSize: 234567000,
-    fileExtension: "mov",
-    description: "Raw footage from summer beach photoshoot - 4K quality",
-    tags: ["raw", "beach", "summer-2025", "footage", "4k", "project:SP02", "team:VID"],
-    campaignName: "Summer Campaign 2025",
-    uploadedBy: "HoangPT",
-    uploadedAt: "2024-11-28T13:00:00Z",
-    updatedAt: "2024-11-28T13:00:00Z",
-    status: "active",
-    downloads: 3,
-    views: 12,
-    // NEW FIELDS
-    workflowStage: "stopped",
-    currentOwner: "HoangPT",
-    parsedAssetId: "SP02-VID-HoangPT-0008",
-    projectCode: "SP02",
-    teamCode: "VID",
-    creatorCode: "HoangPT",
-    sequenceNumber: "0008",
-    team: "creative",
-    isCreativeAI: false,
-    deploymentStatus: "stopped",
-    stopReason: "Campaign ended - Budget exhausted",
-    stoppedAt: "2024-12-20T10:00:00Z",
-  },
-  {
-    id: "asset_009",
-    name: "social-post-template.figma",
-    type: "template",
-    category: "template",
-    fileUrl: "/assets/social-template.figma",
-    fileSize: 2340000,
-    fileExtension: "figma",
-    thumbnailUrl: "https://picsum.photos/seed/orig9/400/400",
-    description: "Social media post template - includes 1:1, 9:16, 16:9 sizes",
-    tags: ["template", "social", "figma", "multi-size", "reusable"],
-    uploadedBy: "Design Team",
-    uploadedAt: "2024-12-05T10:00:00Z",
-    updatedAt: "2024-12-05T10:00:00Z",
-    status: "active",
-    downloads: 67,
-    views: 189,
-    // NEW FIELDS
-    workflowStage: "final",
-    team: "design",
-  },
-  {
-    id: "asset_010",
-    name: "SP04-DSG-TrangNT-0012.png",
-    type: "endcard",
-    category: "final_creative",
-    fileUrl: "/assets/endcard-gaming.png",
-    thumbnailUrl: "https://picsum.photos/seed/orig10/400/400",
-    fileSize: 456000,
-    fileExtension: "png",
-    description: "Gaming app endcard - version 2 with improved CTA",
-    tags: ["endcard", "gaming", "v2", "cta", "project:SP04", "team:DSG"],
-    campaignName: "Gaming App UA",
-    appName: "Super Game",
-    briefId: "brief_003",
-    uploadedBy: "TrangNT",
-    uploadedAt: "2024-12-18T14:00:00Z",
-    updatedAt: "2024-12-22T14:00:00Z",
-    status: "active",
-    downloads: 5,
-    views: 18,
-    // NEW FIELDS
-    workflowStage: "test",
-    currentOwner: "TrangNT",
-    parsedAssetId: "SP04-DSG-TrangNT-0012",
-    projectCode: "SP04",
-    teamCode: "DSG",
-    creatorCode: "TrangNT",
-    sequenceNumber: "0012",
-    team: "design",
-    isCreativeAI: false,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: ["unity", "axon"],
-      performanceRating: {
-        unity: "testing",
-        axon: "testing",
-      },
-    },
-    deploymentStatus: "testing",
-    endcardUrl: "/assets/endcard-gaming.png",
-  },
-  {
-    id: "asset_011",
-    name: "influencer-kit-materials.zip",
-    type: "other",
-    category: "campaign_material",
-    fileUrl: "/assets/influencer-kit.zip",
-    fileSize: 78900000,
-    fileExtension: "zip",
-    thumbnailUrl: "https://picsum.photos/seed/orig11/400/400",
-    description: "Complete influencer kit with logos, banners, and guidelines",
-    tags: ["influencer", "kit", "campaign", "bundle"],
-    campaignName: "Influencer Campaign Q1",
-    uploadedBy: "Marketing Team",
-    uploadedAt: "2024-12-12T11:00:00Z",
-    updatedAt: "2024-12-12T11:00:00Z",
-    status: "active",
-    downloads: 28,
-    views: 95,
-    // NEW FIELDS
-    workflowStage: "final",
-    team: "creative",
-  },
-  {
-    id: "asset_012",
-    name: "SP05-GCVAI-ThaoNT-0001.png",
-    type: "image",
-    category: "final_creative",
-    fileUrl: "/assets/color-palette.png",
-    thumbnailUrl: "https://picsum.photos/seed/orig12/400/400",
-    fileSize: 123000,
-    fileExtension: "png",
-    description: "AI-generated creative for Q1 campaign",
-    tags: ["ai-generated", "q1-2025", "creative", "project:SP05", "team:GCVAI"],
-    campaignName: "Q1 Campaign 2025",
-    uploadedBy: "ThaoNT",
-    uploadedAt: "2024-12-20T10:00:00Z",
-    updatedAt: "2024-12-28T10:00:00Z",
-    status: "active",
-    downloads: 45,
-    views: 167,
-    // NEW FIELDS
-    driveUrl: "https://drive.google.com/file/d/3ghi789xyz/view",
-    driveFileId: "3ghi789xyz",
-    workflowStage: "test",
-    currentOwner: "ThaoNT",
-    parsedAssetId: "SP05-GCVAI-ThaoNT-0001",
-    projectCode: "SP05",
-    teamCode: "GCVAI",
-    creatorCode: "ThaoNT",
-    sequenceNumber: "0001",
-    team: "creative",
-    isCreativeAI: true,
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: ["google", "meta", "tiktok", "apple_search_ads"],
-      performanceRating: {
-        google: "good",
-        meta: "good",
-        tiktok: "good",
-        apple_search_ads: "testing",
-      },
-    },
-    deploymentStatus: "live",
-    liveNetworks: ["google", "meta", "tiktok"],
-    briefId: "brief_005",
-  },
-  {
-    id: "asset_013",
-    name: "playable-puzzle-demo.html",
-    type: "playable",
-    category: "final_creative",
-    fileUrl: "/assets/playable-puzzle.html",
-    thumbnailUrl: "https://picsum.photos/seed/orig13/400/400",
-    fileSize: 567000,
-    fileExtension: "html",
-    description: "Interactive playable ad for puzzle game",
-    tags: ["playable", "puzzle", "interactive", "html5"],
-    campaignName: "Puzzle Game Launch",
-    appName: "Puzzle Master",
-    uploadedBy: "Creative Team",
-    uploadedAt: "2024-12-22T09:00:00Z",
-    updatedAt: "2024-12-22T09:00:00Z",
-    status: "active",
-    downloads: 12,
-    views: 34,
-    // NEW FIELDS
-    workflowStage: "review",
-    team: "creative",
-    uaTestStatus: {
-      isPlanned: true,
-      testedNetworks: [],
-      performanceRating: {},
-    },
-    deploymentStatus: "draft",
-    playableUrl: "/assets/playable-puzzle.html",
-  },
-  {
-    id: "asset_014",
-    name: "SP06-VID-AnhPT-0003.mp4",
-    type: "video",
-    category: "final_creative",
-    fileUrl: "/assets/vertical-ad.mp4",
-    thumbnailUrl: "https://picsum.photos/seed/orig14/400/400",
-    fileSize: 28900000,
-    fileExtension: "mp4",
-    description: "Vertical video ad for Instagram Reels",
-    tags: ["vertical", "reels", "instagram", "9:16", "project:SP06", "team:VID"],
-    campaignName: "Social Media Campaign",
-    appName: "Lifestyle App",
-    uploadedBy: "AnhPT",
-    uploadedAt: "2024-12-25T14:00:00Z",
-    updatedAt: "2024-12-28T14:00:00Z",
-    status: "active",
-    downloads: 3,
-    views: 15,
-    // NEW FIELDS
-    driveUrl: "https://drive.google.com/file/d/4jkl012mno/view",
-    driveFileId: "4jkl012mno",
-    workflowStage: "final",
-    currentOwner: "AnhPT",
-    parsedAssetId: "SP06-VID-AnhPT-0003",
-    projectCode: "SP06",
-    teamCode: "VID",
-    creatorCode: "AnhPT",
-    sequenceNumber: "0003",
-    team: "creative",
-    isCreativeAI: false,
-    deploymentStatus: "draft",
-    youtubeUrl: "https://youtube.com/watch?v=example",
-  },
-  // ============================================
-  // 100 ADDITIONAL ASSETS FOR COMPREHENSIVE TESTING
-  // ============================================
-  ...generateMockAssets(),
-]
+export const mockAssets: Asset[] = generateMockAssets()
 
 // ============================================
 // ASSET GENERATOR FUNCTION - Deterministic (no hydration errors)
@@ -588,9 +132,11 @@ function generateMockAssets(): Asset[] {
     'Replaced by new version',
   ]
 
-  // Generate 100 assets deterministically
-  for (let i = 15; i <= 114; i++) {
-    let seed = i * 1000  // Base seed for this asset
+  // Generate 100 assets with equal distribution across workflow stages
+  // Each stage gets 20 assets: brief(0-19), review(20-39), final(40-59), test(60-79), stopped(80-99)
+  for (let i = 0; i < 100; i++) {
+    const assetIndex = i + 1  // 1-based for asset naming
+    let seed = assetIndex * 1000  // Base seed for this asset
 
     const projectCode = projectCodes[Math.floor(seededRandom(seed++) * projectCodes.length)]
     const teamInfo = teamCodes[Math.floor(seededRandom(seed++) * teamCodes.length)]
@@ -599,8 +145,24 @@ function generateMockAssets(): Asset[] {
 
     const assetType = assetTypes[Math.floor(seededRandom(seed++) * assetTypes.length)]
     const category = categories[Math.floor(seededRandom(seed++) * categories.length)]
-    const workflowStage = workflowStages[Math.floor(seededRandom(seed++) * workflowStages.length)]
-    const deploymentStatus = deploymentStatuses[Math.floor(seededRandom(seed++) * deploymentStatuses.length)]
+
+    // Distribute workflow stages evenly: 20 each
+    const stageIndex = Math.floor(i / 20)
+    const workflowStage = workflowStages[stageIndex]
+
+    // Deployment status based on workflow stage (logical consistency)
+    let deploymentStatus: DeploymentStatus
+    if (workflowStage === 'final') {
+      // Only final assets can be live or testing
+      const finalStatuses: DeploymentStatus[] = ['draft', 'testing', 'live', 'live', 'paused']
+      deploymentStatus = finalStatuses[i % finalStatuses.length]
+    } else if (workflowStage === 'stopped') {
+      deploymentStatus = 'stopped'
+    } else if (workflowStage === 'test') {
+      deploymentStatus = 'testing'
+    } else {
+      deploymentStatus = 'draft'
+    }
 
     const ext = extensions[assetType][Math.floor(seededRandom(seed++) * extensions[assetType].length)]
     const filename = `${projectCode}-${teamInfo.code}-${creatorCode}-${sequenceNumber}.${ext}`
@@ -609,19 +171,29 @@ function generateMockAssets(): Asset[] {
     const hasDriveUrl = seededRandom(seed++) > 0.3
     const hasBrief = seededRandom(seed++) > 0.4
 
-    // Higher ID = more recent date (so sorting by newest works correctly)
-    // ID 114 = most recent, ID 15 = oldest
-    const daysAgo = 114 - i  // ID 114 = 0 days ago, ID 15 = 99 days ago
+    // Generate dates
+    const daysAgo = 100 - assetIndex
     const uploadMonth = 12 - Math.floor(daysAgo / 30)
-    const uploadDay = 28 - (daysAgo % 28)
-    const uploadDate = `2024-${String(uploadMonth).padStart(2, '0')}-${String(uploadDay).padStart(2, '0')}T${String(10 + (i % 14)).padStart(2, '0')}:00:00Z`
+    const uploadDay = Math.max(1, 28 - (daysAgo % 28))
+    const uploadDate = `2024-${String(Math.max(1, uploadMonth)).padStart(2, '0')}-${String(uploadDay).padStart(2, '0')}T${String(10 + (i % 14)).padStart(2, '0')}:00:00Z`
+
+    // Finalized date (only for final, test, stopped stages)
+    const finalizedAt = ['final', 'test', 'stopped'].includes(workflowStage)
+      ? `2024-${String(Math.max(1, uploadMonth)).padStart(2, '0')}-${String(Math.min(28, uploadDay + 3)).padStart(2, '0')}T14:00:00Z`
+      : undefined
+
+    // Live date (only for live status)
+    const liveAt = deploymentStatus === 'live'
+      ? `2024-${String(Math.max(1, uploadMonth)).padStart(2, '0')}-${String(Math.min(28, uploadDay + 5)).padStart(2, '0')}T10:00:00Z`
+      : undefined
 
     // Generate UA test status deterministically
     const hasTestPlan = seededRandom(seed++) > 0.3
     const testedNetworks: AdNetwork[] = []
     const performanceRating: Partial<Record<AdNetwork, 'good' | 'bad' | 'testing'>> = {}
 
-    if (hasTestPlan) {
+    // Only generate test data for final/test stages (logical consistency)
+    if (hasTestPlan && ['final', 'test'].includes(workflowStage)) {
       const numNetworks = Math.floor(seededRandom(seed++) * 5) + 1
       for (let j = 0; j < numNetworks && j < adNetworks.length; j++) {
         const networkIndex = Math.floor(seededRandom(seed++) * adNetworks.length)
@@ -634,16 +206,24 @@ function generateMockAssets(): Asset[] {
       }
     }
 
-    // Generate live networks (only if live status)
+    // Generate live networks (only if final stage and live status)
     const liveNetworks: AdNetwork[] = []
-    if (deploymentStatus === 'live') {
+    if (workflowStage === 'final' && deploymentStatus === 'live') {
       testedNetworks.filter(n => performanceRating[n] === 'good').forEach((n, idx) => {
         if (seededRandom(seed + idx) > 0.3) liveNetworks.push(n)
       })
+      // Ensure at least 1 live network if status is live
+      if (liveNetworks.length === 0 && testedNetworks.length > 0) {
+        liveNetworks.push(testedNetworks[0])
+      }
     }
 
+    // Upload source
+    const uploadSources: Array<'user_upload' | 'erp_report' | 'drive_import'> = ['user_upload', 'erp_report', 'drive_import']
+    const uploadSource = hasDriveUrl ? 'drive_import' : uploadSources[i % 2] as 'user_upload' | 'erp_report'
+
     const asset: Asset = {
-      id: `asset_${String(i).padStart(3, '0')}`,
+      id: `asset_${String(assetIndex).padStart(3, '0')}`,
       name: filename,
       type: assetType,
       category: category,
@@ -663,7 +243,7 @@ function generateMockAssets(): Asset[] {
       appName: appNames[i % appNames.length],
       uploadedBy: creatorCode,
       uploadedAt: uploadDate,
-      updatedAt: '2024-12-28T10:00:00Z',
+      updatedAt: '2025-01-07T10:00:00Z',
       status: 'active',
       downloads: Math.floor(seededRandom(seed++) * 200),
       views: Math.floor(seededRandom(seed++) * 500),
@@ -689,17 +269,21 @@ function generateMockAssets(): Asset[] {
       liveNetworks: liveNetworks.length > 0 ? liveNetworks : undefined,
       // Brief
       briefId: hasBrief ? briefIds[i % briefIds.length] : undefined,
+      // NEW: Date tracking
+      uploadSource: uploadSource,
+      finalizedAt: finalizedAt,
+      liveAt: liveAt,
     }
 
     // Add Drive URL for some assets
     if (hasDriveUrl) {
-      const driveId = `drive_${i.toString(36)}_fixed`
+      const driveId = `drive_${assetIndex.toString(36)}_fixed`
       asset.driveUrl = `https://drive.google.com/file/d/${driveId}/view`
       asset.driveFileId = driveId
     }
 
     // Add stop reason for stopped assets
-    if (deploymentStatus === 'stopped') {
+    if (workflowStage === 'stopped') {
       asset.stopReason = stopReasons[i % stopReasons.length]
       asset.stoppedAt = '2024-12-20T10:00:00Z'
     }
@@ -716,7 +300,7 @@ function generateMockAssets(): Asset[] {
 
     // Add YouTube URL for some video assets (deterministic)
     if (assetType === 'video' && i % 3 === 0) {
-      asset.youtubeUrl = `https://youtube.com/watch?v=vid_${i.toString(36)}`
+      asset.youtubeUrl = `https://youtube.com/watch?v=vid_${assetIndex.toString(36)}`
     }
 
     assets.push(asset)

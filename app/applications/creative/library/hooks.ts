@@ -34,7 +34,7 @@ const defaultFilters: AssetFilters = {
   tags: [],
   campaigns: [],
   sortBy: "newest",
-  workflowStages: [],
+  workflowStages: ['final', 'review'], // Default: show Final assets (review merged into final)
   teams: [],
   adNetworks: [],
   performanceRatings: [],
@@ -255,6 +255,13 @@ export function useAssets() {
         team: formData.team,
         driveUrl: formData.driveUrl,
         driveFileId: formData.driveFileId,
+        // New fields
+        productionTeam: formData.productionTeam,
+        themes: formData.themes,
+        youtubeUrl: formData.youtubeUrl,
+        assetPlatform: formData.assetPlatform,
+        // Date tracking
+        uploadSource: formData.driveUrl ? 'drive_import' : 'user_upload',
       }
     })
     setAssets(prev => [...newAssets, ...prev])
@@ -388,20 +395,39 @@ export function useAssets() {
         performanceRating: {},
       }
 
-      const testedNetworks = currentStatus.testedNetworks.includes(network)
-        ? currentStatus.testedNetworks
-        : [...currentStatus.testedNetworks, network]
+      let testedNetworks: AdNetwork[]
+      let newPerformanceRating = { ...currentStatus.performanceRating }
+      let newLiveNetworks = [...(a.liveNetworks || [])]
+
+      if (rating === null) {
+        // Removing rating - also remove from testedNetworks and liveNetworks
+        testedNetworks = currentStatus.testedNetworks.filter(n => n !== network)
+        delete newPerformanceRating[network]
+        newLiveNetworks = newLiveNetworks.filter(n => n !== network)
+      } else {
+        // Adding/updating rating
+        testedNetworks = currentStatus.testedNetworks.includes(network)
+          ? currentStatus.testedNetworks
+          : [...currentStatus.testedNetworks, network]
+        newPerformanceRating[network] = rating
+
+        // Only add to liveNetworks if asset is finalized (workflowStage === 'final')
+        const isFinalized = a.workflowStage === 'final'
+        if (isFinalized && !newLiveNetworks.includes(network)) {
+          newLiveNetworks = [...newLiveNetworks, network]
+        }
+      }
 
       return {
         ...a,
         uaTestStatus: {
           ...currentStatus,
           testedNetworks,
-          performanceRating: {
-            ...currentStatus.performanceRating,
-            [network]: rating,
-          },
+          performanceRating: newPerformanceRating,
         },
+        liveNetworks: newLiveNetworks,
+        // Update deployment status based on remaining live networks
+        deploymentStatus: newLiveNetworks.length > 0 ? 'live' : (a.deploymentStatus === 'live' ? 'draft' : a.deploymentStatus),
         updatedAt: new Date().toISOString(),
       }
     }))
@@ -436,10 +462,37 @@ export function useAssets() {
   const updateLiveNetworks = useCallback((id: string, networks: AdNetwork[]) => {
     setAssets(prev => prev.map(a => {
       if (a.id !== id) return a
+
+      const currentStatus = a.uaTestStatus || {
+        isPlanned: false,
+        testedNetworks: [],
+        performanceRating: {},
+      }
+
+      // Find networks that were removed from live
+      const removedFromLive = (a.liveNetworks || []).filter(n => !networks.includes(n))
+
+      // Also remove from testedNetworks and performanceRating
+      const newTestedNetworks = currentStatus.testedNetworks.filter(n => !removedFromLive.includes(n))
+      const newPerformanceRating = { ...currentStatus.performanceRating }
+      removedFromLive.forEach(n => delete newPerformanceRating[n])
+
+      // Check if this is the first time going live
+      const wasLive = (a.liveNetworks || []).length > 0
+      const isNowLive = networks.length > 0
+
       return {
         ...a,
         liveNetworks: networks,
-        deploymentStatus: networks.length > 0 ? 'live' : a.deploymentStatus,
+        uaTestStatus: {
+          ...currentStatus,
+          testedNetworks: newTestedNetworks,
+          performanceRating: newPerformanceRating,
+        },
+        // Reset to 'draft' when all networks removed, set to 'live' when networks added
+        deploymentStatus: isNowLive ? 'live' : 'draft',
+        // Set liveAt timestamp when going live for the first time
+        liveAt: isNowLive && !a.liveAt ? new Date().toISOString() : (isNowLive ? a.liveAt : undefined),
         updatedAt: new Date().toISOString(),
       }
     }))

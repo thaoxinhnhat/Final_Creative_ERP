@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react"
+import { Search, X, ChevronDown, ChevronUp, Settings } from "lucide-react"
 import { useState } from "react"
 import type {
   AssetFilters,
@@ -27,6 +27,8 @@ import {
   DEPLOYMENT_STATUS_CONFIG
 } from "../types"
 import { assetStats, uniqueCampaigns } from "../mockData"
+import { FilterSettingsModal, DEFAULT_FILTER_SETTINGS, type FilterSettings } from "./FilterSettingsModal"
+import { RenderIcon } from "./IconPicker"
 
 interface FilterPanelProps {
   filters: AssetFilters
@@ -37,6 +39,9 @@ interface FilterPanelProps {
   onToggleWorkflow?: (stage: WorkflowStage) => void
   onToggleNetwork?: (network: AdNetwork) => void
   activeFilterCount: number
+  filterSettings?: FilterSettings
+  onSaveFilterSettings?: (settings: FilterSettings) => void
+  userRole?: 'ua_team' | 'creative_team' | 'admin'
 }
 
 export function FilterPanel({
@@ -48,7 +53,11 @@ export function FilterPanel({
   onToggleWorkflow,
   onToggleNetwork,
   activeFilterCount,
+  filterSettings = DEFAULT_FILTER_SETTINGS,
+  onSaveFilterSettings,
+  userRole = 'creative_team',
 }: FilterPanelProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
     type: true,
     category: true,
@@ -94,9 +103,23 @@ export function FilterPanel({
   return (
     <div className="w-full h-full border-r bg-white dark:bg-gray-900 overflow-y-auto">
       <div className="p-4 space-y-4">
+        {/* Header with Settings */}
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-sm font-semibold">Bộ lọc</Label>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setSettingsOpen(true)}
+            title="Cài đặt bộ lọc"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+
         {/* Search */}
         <div>
-          <Label className="text-sm font-semibold mb-2 block">Tìm kiếm</Label>
+          <Label className="text-xs text-muted-foreground mb-1 block">Tìm kiếm</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -110,32 +133,124 @@ export function FilterPanel({
 
         <Separator />
 
-        {/* Workflow Stage - NEW */}
+        {/* Trạng thái (Workflow Stage + Deployment Status merged) */}
         <div className="space-y-2">
           <SectionHeader
-            title="Workflow Stage"
+            title="Trạng thái"
             section="workflow"
-            count={filters.workflowStages?.length}
+            count={(filters.workflowStages?.length || 0) + (filters.deploymentStatuses?.length || 0)}
           />
           {expandedSections.workflow && (
-            <div className="space-y-1.5 pt-1">
-              {(Object.keys(WORKFLOW_STAGE_CONFIG) as WorkflowStage[]).map((stage) => (
-                <div key={stage} className="flex items-center">
-                  <Checkbox
-                    id={`workflow-${stage}`}
-                    checked={filters.workflowStages?.includes(stage)}
-                    onCheckedChange={() => onToggleWorkflow?.(stage)}
-                  />
-                  <Label
-                    htmlFor={`workflow-${stage}`}
-                    className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
-                  >
-                    <span>{WORKFLOW_STAGE_CONFIG[stage].icon}</span>
-                    <span>{WORKFLOW_STAGE_CONFIG[stage].label}</span>
-                    <span className="text-muted-foreground">({assetStats.byWorkflowStage[stage]})</span>
-                  </Label>
+            <div className="space-y-3 pt-1">
+              {/* Workflow Stages */}
+              <div>
+                <p className="text-[10px] text-muted-foreground font-medium mb-1.5 uppercase tracking-wide">Quy trình</p>
+                <div className="space-y-1.5">
+                  {(Object.keys(WORKFLOW_STAGE_CONFIG) as WorkflowStage[]).map((stage) => (
+                    <div key={stage} className="flex items-center">
+                      <Checkbox
+                        id={`workflow-${stage}`}
+                        checked={filters.workflowStages?.includes(stage)}
+                        onCheckedChange={() => onToggleWorkflow?.(stage)}
+                      />
+                      <Label
+                        htmlFor={`workflow-${stage}`}
+                        className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                      >
+                        <span>{WORKFLOW_STAGE_CONFIG[stage].icon}</span>
+                        <span>{WORKFLOW_STAGE_CONFIG[stage].label}</span>
+                        <span className="text-muted-foreground">({assetStats.byWorkflowStage[stage]})</span>
+                      </Label>
+                    </div>
+                  ))}
+                  {/* Custom Workflow Stages */}
+                  {filterSettings.customWorkflowStages?.filter(opt => opt.enabled).map((opt) => (
+                    <div key={opt.id} className="flex items-center">
+                      <Checkbox
+                        id={`workflow-custom-${opt.id}`}
+                        checked={filters.customFilters?.includes(opt.id)}
+                        onCheckedChange={() => {
+                          const current = filters.customFilters || []
+                          const updated = current.includes(opt.id)
+                            ? current.filter(f => f !== opt.id)
+                            : [...current, opt.id]
+                          onUpdateFilters({ customFilters: updated })
+                        }}
+                      />
+                      <Label
+                        htmlFor={`workflow-custom-${opt.id}`}
+                        className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                      >
+                        <span
+                          className="w-4 h-4 rounded flex items-center justify-center"
+                          style={{ backgroundColor: opt.color }}
+                        >
+                          <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                        </span>
+                        <span>{opt.label}</span>
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Deployment Status */}
+              <div>
+                <p className="text-[10px] text-muted-foreground font-medium mb-1.5 uppercase tracking-wide">Deployment</p>
+                <div className="space-y-1.5">
+                  {(Object.keys(DEPLOYMENT_STATUS_CONFIG) as DeploymentStatus[]).map((status) => (
+                    <div key={status} className="flex items-center">
+                      <Checkbox
+                        id={`deployment-${status}`}
+                        checked={filters.deploymentStatuses?.includes(status)}
+                        onCheckedChange={() => {
+                          const current = filters.deploymentStatuses || []
+                          const updated = current.includes(status)
+                            ? current.filter(s => s !== status)
+                            : [...current, status]
+                          onUpdateFilters({ deploymentStatuses: updated })
+                        }}
+                      />
+                      <Label
+                        htmlFor={`deployment-${status}`}
+                        className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                      >
+                        <span>{DEPLOYMENT_STATUS_CONFIG[status].icon}</span>
+                        <span>{DEPLOYMENT_STATUS_CONFIG[status].label}</span>
+                        <span className="text-muted-foreground">({assetStats.byDeploymentStatus[status]})</span>
+                      </Label>
+                    </div>
+                  ))}
+                  {/* Custom Deployment Statuses */}
+                  {filterSettings.customDeploymentStatuses?.filter(opt => opt.enabled).map((opt) => (
+                    <div key={opt.id} className="flex items-center">
+                      <Checkbox
+                        id={`deployment-custom-${opt.id}`}
+                        checked={filters.customFilters?.includes(opt.id)}
+                        onCheckedChange={() => {
+                          const current = filters.customFilters || []
+                          const updated = current.includes(opt.id)
+                            ? current.filter(f => f !== opt.id)
+                            : [...current, opt.id]
+                          onUpdateFilters({ customFilters: updated })
+                        }}
+                      />
+                      <Label
+                        htmlFor={`deployment-custom-${opt.id}`}
+                        className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                      >
+                        <span
+                          className="w-4 h-4 rounded flex items-center justify-center"
+                          style={{ backgroundColor: opt.color }}
+                        >
+                          <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                        </span>
+                        <span>{opt.label}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -205,40 +320,31 @@ export function FilterPanel({
                   </Label>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Deployment Status - NEW */}
-        <div className="space-y-2">
-          <SectionHeader
-            title="Deployment Status"
-            section="deployment"
-            count={filters.deploymentStatuses?.length}
-          />
-          {expandedSections.deployment && (
-            <div className="space-y-1.5 pt-1">
-              {(Object.keys(DEPLOYMENT_STATUS_CONFIG) as DeploymentStatus[]).map((status) => (
-                <div key={status} className="flex items-center">
+              {/* Custom Teams */}
+              {filterSettings.customTeams?.filter(opt => opt.enabled).map((opt) => (
+                <div key={opt.id} className="flex items-center">
                   <Checkbox
-                    id={`deployment-${status}`}
-                    checked={filters.deploymentStatuses?.includes(status)}
+                    id={`team-custom-${opt.id}`}
+                    checked={filters.customFilters?.includes(opt.id)}
                     onCheckedChange={() => {
-                      const current = filters.deploymentStatuses || []
-                      const updated = current.includes(status)
-                        ? current.filter(s => s !== status)
-                        : [...current, status]
-                      onUpdateFilters({ deploymentStatuses: updated })
+                      const current = filters.customFilters || []
+                      const updated = current.includes(opt.id)
+                        ? current.filter(f => f !== opt.id)
+                        : [...current, opt.id]
+                      onUpdateFilters({ customFilters: updated })
                     }}
                   />
                   <Label
-                    htmlFor={`deployment-${status}`}
+                    htmlFor={`team-custom-${opt.id}`}
                     className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
                   >
-                    <span>{DEPLOYMENT_STATUS_CONFIG[status].icon}</span>
-                    <span>{DEPLOYMENT_STATUS_CONFIG[status].label}</span>
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center"
+                      style={{ backgroundColor: opt.color }}
+                    >
+                      <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                    </span>
+                    <span>{opt.label}</span>
                   </Label>
                 </div>
               ))}
@@ -270,6 +376,34 @@ export function FilterPanel({
                   </Label>
                 </div>
               ))}
+              {/* Custom File Types */}
+              {filterSettings.customFileTypes?.filter(opt => opt.enabled).map((opt) => (
+                <div key={opt.id} className="flex items-center">
+                  <Checkbox
+                    id={`type-custom-${opt.id}`}
+                    checked={filters.customFilters?.includes(opt.id)}
+                    onCheckedChange={() => {
+                      const current = filters.customFilters || []
+                      const updated = current.includes(opt.id)
+                        ? current.filter(f => f !== opt.id)
+                        : [...current, opt.id]
+                      onUpdateFilters({ customFilters: updated })
+                    }}
+                  />
+                  <Label
+                    htmlFor={`type-custom-${opt.id}`}
+                    className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                  >
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center"
+                      style={{ backgroundColor: opt.color }}
+                    >
+                      <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                    </span>
+                    <span>{opt.label}</span>
+                  </Label>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -295,6 +429,34 @@ export function FilterPanel({
                   <Label htmlFor={`cat-${cat}`} className="ml-2 text-xs cursor-pointer flex-1">
                     {CATEGORY_CONFIG[cat].icon} {CATEGORY_CONFIG[cat].label}
                     <span className="text-muted-foreground ml-1">({assetStats.byCategory[cat]})</span>
+                  </Label>
+                </div>
+              ))}
+              {/* Custom Categories */}
+              {filterSettings.customCategories?.filter(opt => opt.enabled).map((opt) => (
+                <div key={opt.id} className="flex items-center">
+                  <Checkbox
+                    id={`cat-custom-${opt.id}`}
+                    checked={filters.customFilters?.includes(opt.id)}
+                    onCheckedChange={() => {
+                      const current = filters.customFilters || []
+                      const updated = current.includes(opt.id)
+                        ? current.filter(f => f !== opt.id)
+                        : [...current, opt.id]
+                      onUpdateFilters({ customFilters: updated })
+                    }}
+                  />
+                  <Label
+                    htmlFor={`cat-custom-${opt.id}`}
+                    className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                  >
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center"
+                      style={{ backgroundColor: opt.color }}
+                    >
+                      <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                    </span>
+                    <span>{opt.label}</span>
                   </Label>
                 </div>
               ))}
@@ -327,6 +489,34 @@ export function FilterPanel({
                   />
                   <Label htmlFor={`campaign-${campaign}`} className="ml-2 text-xs cursor-pointer truncate">
                     {campaign}
+                  </Label>
+                </div>
+              ))}
+              {/* Custom Campaigns */}
+              {filterSettings.customCampaigns?.filter(opt => opt.enabled).map((opt) => (
+                <div key={opt.id} className="flex items-center">
+                  <Checkbox
+                    id={`campaign-custom-${opt.id}`}
+                    checked={filters.customFilters?.includes(opt.id)}
+                    onCheckedChange={() => {
+                      const current = filters.customFilters || []
+                      const updated = current.includes(opt.id)
+                        ? current.filter(f => f !== opt.id)
+                        : [...current, opt.id]
+                      onUpdateFilters({ customFilters: updated })
+                    }}
+                  />
+                  <Label
+                    htmlFor={`campaign-custom-${opt.id}`}
+                    className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
+                  >
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center"
+                      style={{ backgroundColor: opt.color }}
+                    >
+                      <RenderIcon name={opt.icon} className="h-3 w-3 text-white" />
+                    </span>
+                    <span>{opt.label}</span>
                   </Label>
                 </div>
               ))}
@@ -373,6 +563,15 @@ export function FilterPanel({
           </>
         )}
       </div>
+
+      {/* Filter Settings Modal */}
+      <FilterSettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={filterSettings}
+        onSaveSettings={onSaveFilterSettings || (() => { })}
+        userRole={userRole}
+      />
     </div>
   )
 }
