@@ -1,4 +1,4 @@
-import type { Asset, AssetCategory, AssetType, WorkflowStage, AdNetwork, CreativeTeam, DeploymentStatus } from "./types"
+import type { Asset, AssetCategory, AssetType, WorkflowStage, AdNetwork, CreativeTeam, DeploymentStatus, Brief, BriefStatus } from "./types"
 
 // ============================================
 // BRIEF MOCK DATA - For Brief grouping display
@@ -17,11 +17,33 @@ export function getBriefName(briefId?: string): string | undefined {
 }
 
 // ============================================
+// FULL BRIEF CARDS DATA (15 briefs)
+// ============================================
+export const mockBriefs: Brief[] = [
+  { id: "brief_001", briefId: "BRF-2024-001", title: "Fitness App - Summer Campaign", campaignName: "Summer Campaign 2025", client: "FitMax", status: "completed", createdBy: "ThuyBT", createdAt: "2024-06-15T09:00:00Z", tags: ["Creative", "UA", "Summer"], color: "border-l-blue-500" },
+  { id: "brief_002", briefId: "BRF-2024-002", title: "Gaming App - Q4 UA", campaignName: "Gaming App UA", client: "SuperGame", status: "in_progress", createdBy: "AnhNT", createdAt: "2024-09-20T10:00:00Z", tags: ["Gaming", "UA", "Q4"], color: "border-l-purple-500" },
+  { id: "brief_003", briefId: "BRF-2024-003", title: "Shopping App - Holiday Sale", campaignName: "Holiday Special", client: "ShopPlus", status: "review", createdBy: "MinhPT", createdAt: "2024-10-01T08:00:00Z", tags: ["Shopping", "Holiday", "Sale"], color: "border-l-emerald-500" },
+  { id: "brief_004", briefId: "BRF-2024-004", title: "Finance App - Trust Campaign", campaignName: "Q1 Campaign 2025", client: "FinanceGo", status: "draft", createdBy: "LoanNT", createdAt: "2024-11-10T14:00:00Z", tags: ["Finance", "Trust", "Brand"], color: "border-l-cyan-500" },
+  { id: "brief_005", briefId: "BRF-2024-005", title: "Travel App - Launch 2025", campaignName: "App Launch 2025", client: "TravelGo", status: "in_progress", createdBy: "TrangNT", createdAt: "2024-11-25T11:00:00Z", tags: ["Travel", "Launch", "2025"], color: "border-l-amber-500" },
+  { id: "brief_006", briefId: "BRF-2024-006", title: "Music App - Year End Wrap", campaignName: "New Year Promo", client: "MusicStream", status: "completed", createdBy: "ThaoNT", createdAt: "2024-12-01T09:30:00Z", tags: ["Music", "Year End", "Promo"], color: "border-l-pink-500" },
+  { id: "brief_007", briefId: "BRF-2025-001", title: "Education App - Back to School", campaignName: "Back to School", client: "EduLearn", status: "in_progress", createdBy: "HoangPT", createdAt: "2025-01-05T08:00:00Z", tags: ["Education", "School", "Spring"], color: "border-l-indigo-500" },
+  { id: "brief_008", briefId: "BRF-2025-002", title: "Food Delivery - Valentine Special", campaignName: "Valentine Collection", client: "FoodFast", status: "review", createdBy: "AnhPT", createdAt: "2025-01-15T10:00:00Z", tags: ["Food", "Valentine", "Promo"], color: "border-l-rose-500" },
+  { id: "brief_009", briefId: "BRF-2025-003", title: "Fitness App - New Year Resolution", campaignName: "New Year Promo", client: "FitMax", status: "completed", createdBy: "NgocDT", createdAt: "2025-01-20T09:00:00Z", tags: ["Fitness", "New Year", "Health"], color: "border-l-teal-500" },
+  { id: "brief_010", briefId: "BRF-2025-004", title: "Social Media App - Influencer Wave", campaignName: "Influencer Campaign Q1", client: "SocialBuzz", status: "draft", createdBy: "HaiNV", createdAt: "2025-02-01T13:00:00Z", tags: ["Social", "Influencer", "UGC"], color: "border-l-violet-500" },
+  { id: "brief_011", briefId: "BRF-2025-005", title: "Gaming App - Spring Tournament", campaignName: "Spring Fashion", client: "SuperGame", status: "in_progress", createdBy: "KhanhLM", createdAt: "2025-02-10T08:30:00Z", tags: ["Gaming", "Tournament", "Spring"], color: "border-l-orange-500" },
+  { id: "brief_012", briefId: "BRF-2025-006", title: "Health Tracker - Wellness Month", campaignName: "Spring Fashion", client: "HealthPlus", status: "draft", createdBy: "AnhVT", createdAt: "2025-02-20T11:00:00Z", tags: ["Health", "Wellness", "Tracker"], color: "border-l-lime-500" },
+  { id: "brief_013", briefId: "BRF-2025-007", title: "Photo Editor - Creative Tools", campaignName: "Product Launch", client: "PhotoPro", status: "review", createdBy: "DucNM", createdAt: "2025-03-01T09:00:00Z", tags: ["Photo", "Creative", "Tools"], color: "border-l-sky-500" },
+  { id: "brief_014", briefId: "BRF-2025-008", title: "Dating App - Spring Love", campaignName: "Spring Fashion", client: "LoveMatch", status: "in_progress", createdBy: "HuongTT", createdAt: "2025-03-05T10:00:00Z", tags: ["Dating", "Spring", "Love"], color: "border-l-fuchsia-500" },
+  { id: "brief_015", briefId: "BRF-2025-009", title: "Puzzle Master - Easter Event", campaignName: "Easter Campaign", client: "PuzzleInc", status: "draft", createdBy: "TuanNQ", createdAt: "2025-03-10T08:00:00Z", tags: ["Puzzle", "Easter", "Event"], color: "border-l-yellow-500" },
+]
+
+// ============================================
 // GENERATED 100 TEST ASSETS WITH PROPER DISTRIBUTION
-// - 20 assets per workflow stage (brief, review, final, test, stopped)
+// - 50% 'final' (đã nghiệm thu, chưa chạy)
+// - 40% 'live' (đang chạy quảng cáo)
+// - 10% 'stopped' (đã dừng)
 // - Logical deployment status per stage
-// - New date tracking fields (finalizedAt, liveAt, uploadSource)
-// - Only final stage assets can go live
+// - Date tracking fields (finalizedAt, liveAt, uploadSource)
 // ============================================
 
 export const mockAssets: Asset[] = generateMockAssets()
@@ -52,9 +74,10 @@ function generateMockAssets(): Asset[] {
     'NgocDT', 'HaiNV', 'KhanhLM', 'AnhVT', 'DucNM', 'HuongTT', 'TuanNQ', 'LinhHT',
     'SonPH', 'MaiNTT', 'DungHV', 'VanTK'
   ]
-  const assetTypes: AssetType[] = ['image', 'video', 'document', 'template', 'playable', 'endcard', 'other']
+  const assetTypes: AssetType[] = ['image', 'video', 'template', 'playable', 'endcard', 'other']
   const categories: AssetCategory[] = ['final_creative', 'reference', 'brand_asset', 'template', 'campaign_material', 'raw_footage']
-  const workflowStages: WorkflowStage[] = ['brief', 'review', 'final', 'test', 'stopped']
+  // Workflow statuses - only assets from ERP (final, live, stopped)
+  const workflowStages: WorkflowStage[] = ['final', 'live', 'stopped']
   const deploymentStatuses: DeploymentStatus[] = ['draft', 'testing', 'live', 'paused', 'stopped']
   const adNetworks: AdNetwork[] = ['google', 'meta', 'mintegral', 'axon', 'unity', 'tiktok', 'apple_search_ads']
   const briefIds = ['brief_001', 'brief_002', 'brief_003', 'brief_005']
@@ -116,7 +139,6 @@ function generateMockAssets(): Asset[] {
   const extensions: Record<string, string[]> = {
     image: ['png', 'jpg', 'jpeg', 'webp'],
     video: ['mp4', 'mov', 'webm'],
-    document: ['pdf', 'docx', 'pptx'],
     template: ['figma', 'psd', 'ai', 'xd'],
     playable: ['html', 'zip'],
     endcard: ['png', 'jpg'],
@@ -132,8 +154,7 @@ function generateMockAssets(): Asset[] {
     'Replaced by new version',
   ]
 
-  // Generate 100 assets with equal distribution across workflow stages
-  // Each stage gets 20 assets: brief(0-19), review(20-39), final(40-59), test(60-79), stopped(80-99)
+  // Generate 100 assets with weighted distribution: final (50), live (40), stopped (10)
   for (let i = 0; i < 100; i++) {
     const assetIndex = i + 1  // 1-based for asset naming
     let seed = assetIndex * 1000  // Base seed for this asset
@@ -146,22 +167,27 @@ function generateMockAssets(): Asset[] {
     const assetType = assetTypes[Math.floor(seededRandom(seed++) * assetTypes.length)]
     const category = categories[Math.floor(seededRandom(seed++) * categories.length)]
 
-    // Distribute workflow stages evenly: 20 each
-    const stageIndex = Math.floor(i / 20)
-    const workflowStage = workflowStages[stageIndex]
+    // Distribute workflow stages: final (50%), live (40%), stopped (10%)
+    let workflowStage: WorkflowStage
+    if (i < 50) {
+      workflowStage = 'final'
+    } else if (i < 90) {
+      workflowStage = 'live'
+    } else {
+      workflowStage = 'stopped'
+    }
 
     // Deployment status based on workflow stage (logical consistency)
     let deploymentStatus: DeploymentStatus
-    if (workflowStage === 'final') {
-      // Only final assets can be live or testing
-      const finalStatuses: DeploymentStatus[] = ['draft', 'testing', 'live', 'live', 'paused']
-      deploymentStatus = finalStatuses[i % finalStatuses.length]
+    if (workflowStage === 'live') {
+      // Live assets are actively running
+      deploymentStatus = 'live'
     } else if (workflowStage === 'stopped') {
       deploymentStatus = 'stopped'
-    } else if (workflowStage === 'test') {
-      deploymentStatus = 'testing'
     } else {
-      deploymentStatus = 'draft'
+      // final stage - ready to go live
+      const finalStatuses: DeploymentStatus[] = ['draft', 'testing']
+      deploymentStatus = finalStatuses[i % finalStatuses.length]
     }
 
     const ext = extensions[assetType][Math.floor(seededRandom(seed++) * extensions[assetType].length)]
@@ -177,8 +203,8 @@ function generateMockAssets(): Asset[] {
     const uploadDay = Math.max(1, 28 - (daysAgo % 28))
     const uploadDate = `2024-${String(Math.max(1, uploadMonth)).padStart(2, '0')}-${String(uploadDay).padStart(2, '0')}T${String(10 + (i % 14)).padStart(2, '0')}:00:00Z`
 
-    // Finalized date (only for final, test, stopped stages)
-    const finalizedAt = ['final', 'test', 'stopped'].includes(workflowStage)
+    // Finalized date (only for final and stopped stages)
+    const finalizedAt = ['final', 'stopped'].includes(workflowStage)
       ? `2024-${String(Math.max(1, uploadMonth)).padStart(2, '0')}-${String(Math.min(28, uploadDay + 3)).padStart(2, '0')}T14:00:00Z`
       : undefined
 
@@ -192,8 +218,8 @@ function generateMockAssets(): Asset[] {
     const testedNetworks: AdNetwork[] = []
     const performanceRating: Partial<Record<AdNetwork, 'good' | 'bad' | 'testing'>> = {}
 
-    // Only generate test data for final/test stages (logical consistency)
-    if (hasTestPlan && ['final', 'test'].includes(workflowStage)) {
+    // Only generate test data for live stage (logical consistency)
+    if (hasTestPlan && workflowStage === 'live') {
       const numNetworks = Math.floor(seededRandom(seed++) * 5) + 1
       for (let j = 0; j < numNetworks && j < adNetworks.length; j++) {
         const networkIndex = Math.floor(seededRandom(seed++) * adNetworks.length)
@@ -206,9 +232,9 @@ function generateMockAssets(): Asset[] {
       }
     }
 
-    // Generate live networks (only if final stage and live status)
+    // Generate live networks (only if live stage)
     const liveNetworks: AdNetwork[] = []
-    if (workflowStage === 'final' && deploymentStatus === 'live') {
+    if (workflowStage === 'live') {
       testedNetworks.filter(n => performanceRating[n] === 'good').forEach((n, idx) => {
         if (seededRandom(seed + idx) > 0.3) liveNetworks.push(n)
       })
@@ -269,6 +295,7 @@ function generateMockAssets(): Asset[] {
       liveNetworks: liveNetworks.length > 0 ? liveNetworks : undefined,
       // Brief
       briefId: hasBrief ? briefIds[i % briefIds.length] : undefined,
+      briefName: hasBrief ? MOCK_BRIEFS[briefIds[i % briefIds.length]]?.name : undefined,
       // NEW: Date tracking
       uploadSource: uploadSource,
       finalizedAt: finalizedAt,
@@ -325,7 +352,6 @@ export const assetStats = {
   byType: {
     image: mockAssets.filter(a => a.type === 'image').length,
     video: mockAssets.filter(a => a.type === 'video').length,
-    document: mockAssets.filter(a => a.type === 'document').length,
     template: mockAssets.filter(a => a.type === 'template').length,
     playable: mockAssets.filter(a => a.type === 'playable').length,
     endcard: mockAssets.filter(a => a.type === 'endcard').length,
@@ -340,10 +366,8 @@ export const assetStats = {
     raw_footage: mockAssets.filter(a => a.category === 'raw_footage').length,
   } as Record<AssetCategory, number>,
   byWorkflowStage: {
-    brief: mockAssets.filter(a => a.workflowStage === 'brief').length,
-    review: mockAssets.filter(a => a.workflowStage === 'review').length,
     final: mockAssets.filter(a => a.workflowStage === 'final').length,
-    test: mockAssets.filter(a => a.workflowStage === 'test').length,
+    live: mockAssets.filter(a => a.workflowStage === 'live').length,
     stopped: mockAssets.filter(a => a.workflowStage === 'stopped').length,
   } as Record<WorkflowStage, number>,
   byTeam: {

@@ -3,9 +3,11 @@
 // ============================================
 
 // ============================================
-// WORKFLOW & STAGE TYPES
+// WORKFLOW STATUS TYPES
+// Library only shows Final assets from ERP Report
+// Status: Final (đã nghiệm thu) → Live (đang chạy) → Stopped (đã dừng)
 // ============================================
-export type WorkflowStage = 'brief' | 'review' | 'final' | 'test' | 'stopped'
+export type WorkflowStage = 'final' | 'live' | 'stopped'
 
 export const WORKFLOW_STAGE_CONFIG: Record<WorkflowStage, {
   label: string
@@ -16,24 +18,6 @@ export const WORKFLOW_STAGE_CONFIG: Record<WorkflowStage, {
   headerBorder: string
   order: number
 }> = {
-  brief: {
-    label: "Brief",
-    icon: "📋",
-    color: "text-slate-700",
-    bgColor: "bg-slate-50",
-    headerBg: "bg-gradient-to-r from-slate-100 to-slate-50",
-    headerBorder: "border-l-4 border-l-slate-400",
-    order: 1
-  },
-  review: {
-    label: "Nghiệm thu",
-    icon: "👀",
-    color: "text-amber-700",
-    bgColor: "bg-amber-50",
-    headerBg: "bg-gradient-to-r from-amber-100 to-amber-50",
-    headerBorder: "border-l-4 border-l-amber-400",
-    order: 2
-  },
   final: {
     label: "Final",
     icon: "✅",
@@ -41,16 +25,16 @@ export const WORKFLOW_STAGE_CONFIG: Record<WorkflowStage, {
     bgColor: "bg-emerald-50",
     headerBg: "bg-gradient-to-r from-emerald-100 to-emerald-50",
     headerBorder: "border-l-4 border-l-emerald-500",
-    order: 3
+    order: 1
   },
-  test: {
-    label: "Test",
-    icon: "🧪",
-    color: "text-sky-700",
-    bgColor: "bg-sky-50",
-    headerBg: "bg-gradient-to-r from-sky-100 to-sky-50",
-    headerBorder: "border-l-4 border-l-sky-500",
-    order: 4
+  live: {
+    label: "Live",
+    icon: "🟢",
+    color: "text-blue-700",
+    bgColor: "bg-blue-50",
+    headerBg: "bg-gradient-to-r from-blue-100 to-blue-50",
+    headerBorder: "border-l-4 border-l-blue-500",
+    order: 2
   },
   stopped: {
     label: "Stop",
@@ -59,7 +43,7 @@ export const WORKFLOW_STAGE_CONFIG: Record<WorkflowStage, {
     bgColor: "bg-rose-50",
     headerBg: "bg-gradient-to-r from-rose-100 to-rose-50",
     headerBorder: "border-l-4 border-l-rose-400",
-    order: 5
+    order: 3
   },
 }
 
@@ -160,7 +144,7 @@ export const GAME_THEME_CONFIG: Record<GameTheme, {
 // ============================================
 // ASSET TYPES (Extended)
 // ============================================
-export type AssetType = 'image' | 'video' | 'document' | 'template' | 'playable' | 'endcard' | 'other'
+export type AssetType = 'image' | 'video' | 'template' | 'playable' | 'endcard' | 'other'
 
 export type AssetCategory =
   | 'final_creative'
@@ -271,6 +255,36 @@ export interface Asset {
 }
 
 // ============================================
+// BRIEF TYPES
+// ============================================
+export type BriefStatus = 'draft' | 'in_progress' | 'review' | 'completed'
+
+export const BRIEF_STATUS_CONFIG: Record<BriefStatus, {
+  label: string
+  icon: string
+  color: string
+  bgColor: string
+}> = {
+  draft: { label: "Draft", icon: "📝", color: "text-gray-300", bgColor: "bg-gray-600" },
+  in_progress: { label: "In Progress", icon: "🔄", color: "text-blue-300", bgColor: "bg-blue-500" },
+  review: { label: "Review", icon: "👁️", color: "text-orange-300", bgColor: "bg-orange-500" },
+  completed: { label: "Completed", icon: "✅", color: "text-green-300", bgColor: "bg-green-500" },
+}
+
+export interface Brief {
+  id: string
+  briefId: string          // Display ID: BRF-2024-001
+  title: string
+  campaignName?: string
+  client: string
+  status: BriefStatus
+  createdBy: string
+  createdAt: string
+  tags: string[]
+  color: string            // Border accent color class
+}
+
+// ============================================
 // FILTER TYPES (Extended)
 // ============================================
 export interface AssetFilters {
@@ -296,6 +310,9 @@ export interface AssetFilters {
 
   // NEW: Custom filters (from settings)
   customFilters?: string[]
+
+  // NEW: Brief filter
+  showBriefsOnly?: boolean
 }
 
 // ============================================
@@ -310,6 +327,7 @@ export interface UploadAssetFormData {
   appName?: string
   assetPlatform?: 'app' | 'game'
   briefId?: string
+  briefName?: string  // Display name of the Brief
   conceptId?: string
 
   // NEW: Workflow
@@ -324,6 +342,9 @@ export interface UploadAssetFormData {
   // NEW: From Drive
   driveUrl?: string
   driveFileId?: string
+
+  // Project
+  projectCode?: string
 }
 
 // ============================================
@@ -377,7 +398,6 @@ export const CATEGORY_CONFIG: Record<AssetCategory, { label: string; icon: strin
 export const TYPE_CONFIG: Record<AssetType, { label: string; icon: string }> = {
   image: { label: "Images", icon: "🖼️" },
   video: { label: "Videos", icon: "🎬" },
-  document: { label: "Documents", icon: "📄" },
   template: { label: "Templates", icon: "📋" },
   playable: { label: "Playables", icon: "🎮" },
   endcard: { label: "Endcards", icon: "🏷️" },

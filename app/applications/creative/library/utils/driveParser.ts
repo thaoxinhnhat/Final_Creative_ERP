@@ -133,16 +133,16 @@ function detectTeamFromCode(code: string): CreativeTeam | undefined {
 // MIME TYPE DETECTION
 // ============================================
 
-export function detectAssetTypeFromMime(mimeType: string): AssetType {
+export function detectAssetTypeFromMime(mimeType: string): AssetType | null {
     if (mimeType.startsWith('image/')) return 'image'
     if (mimeType.startsWith('video/')) return 'video'
-    if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) return 'document'
+    if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text')) return null
     if (mimeType.includes('photoshop') || mimeType.includes('figma') || mimeType.includes('sketch')) return 'template'
     if (mimeType.includes('html') || mimeType.includes('javascript')) return 'playable'
     return 'other'
 }
 
-export function detectAssetTypeFromExtension(extension: string): AssetType {
+export function detectAssetTypeFromExtension(extension: string): AssetType | null {
     const ext = extension.toLowerCase().replace('.', '')
 
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff']
@@ -153,7 +153,7 @@ export function detectAssetTypeFromExtension(extension: string): AssetType {
 
     if (imageExts.includes(ext)) return 'image'
     if (videoExts.includes(ext)) return 'video'
-    if (docExts.includes(ext)) return 'document'
+    if (docExts.includes(ext)) return null // Documents are not supported
     if (templateExts.includes(ext)) return 'template'
     if (playableExts.includes(ext)) return 'playable'
     return 'other'
@@ -165,30 +165,21 @@ export function detectAssetTypeFromExtension(extension: string): AssetType {
 
 /**
  * Auto-detect workflow stage based on asset context
+ * Library status: Final → Live → Stopped
  */
 export function detectWorkflowStage(asset: Partial<Asset>): WorkflowStage {
-    // If has live networks, it's in test (actively running)
+    // If has live networks, it's live (actively running)
     if (asset.liveNetworks && asset.liveNetworks.length > 0) {
-        return 'test'
+        return 'live'
     }
 
-    // If has UA test status with tested networks, it's in test queue
+    // If has UA test status with tested networks, it's live
     if (asset.uaTestStatus?.testedNetworks && asset.uaTestStatus.testedNetworks.length > 0) {
-        return 'test'
+        return 'live'
     }
 
-    // If has UA test plan, it's in review (nghiệm thu)
-    if (asset.uaTestStatus?.isPlanned) {
-        return 'review'
-    }
-
-    // If linked to a brief or task, it's final (completed, ready for test)
-    if (asset.briefId || (asset.taskIds && asset.taskIds.length > 0)) {
-        return 'final'
-    }
-
-    // Default to brief stage
-    return 'brief'
+    // Default to final (assets imported to Library are final)
+    return 'final'
 }
 
 // ============================================
@@ -212,10 +203,6 @@ const HIGH_QUALITY_THUMBNAILS: Record<string, string[]> = {
         'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&h=600&fit=crop&q=90',
         'https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=800&h=600&fit=crop&q=90',
     ],
-    document: [
-        'https://images.unsplash.com/photo-1568667256549-094345857637?w=800&h=600&fit=crop&q=90',
-        'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=600&fit=crop&q=90',
-    ],
     default: [
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=600&fit=crop&q=90',
     ],
@@ -225,7 +212,6 @@ const HIGH_QUALITY_THUMBNAILS: Record<string, string[]> = {
 const MOCK_THUMBNAILS: Record<string, string> = {
     video: HIGH_QUALITY_THUMBNAILS.video[0],
     image: HIGH_QUALITY_THUMBNAILS.image[0],
-    document: HIGH_QUALITY_THUMBNAILS.document[0],
     default: HIGH_QUALITY_THUMBNAILS.default[0],
 }
 
@@ -281,7 +267,7 @@ export async function fetchDriveFileWithThumbnail(driveUrl: string): Promise<{
     const assetType = detectAssetTypeFromMime(fileInfo.mimeType)
 
     // Get high-quality thumbnail based on file type
-    const thumbnails = HIGH_QUALITY_THUMBNAILS[assetType] || HIGH_QUALITY_THUMBNAILS.default
+    const thumbnails = (assetType && HIGH_QUALITY_THUMBNAILS[assetType]) || HIGH_QUALITY_THUMBNAILS.default
     const hash = parsed.fileId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const thumbnailUrl = thumbnails[hash % thumbnails.length]
 

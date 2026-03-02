@@ -17,7 +17,7 @@ import { Settings, Lock, Save, RotateCcw, Plus, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { IconPicker, RenderIcon } from "./IconPicker"
 import { ColorPicker } from "./ColorPicker"
-import { uniqueCampaigns } from "../mockData"
+import { uniqueCampaigns } from "../mock-data"
 
 // Custom filter option type
 export interface CustomFilterOption {
@@ -40,10 +40,8 @@ export interface FilterSettings {
         uploadDate: boolean
     }
     workflowStages: {
-        brief: boolean
-        review: boolean
         final: boolean
-        test: boolean
+        live: boolean
         stopped: boolean
     }
     deploymentStatuses: {
@@ -64,7 +62,6 @@ export interface FilterSettings {
     fileTypes: {
         images: boolean
         videos: boolean
-        documents: boolean
         templates: boolean
         playables: boolean
         endcards: boolean
@@ -103,10 +100,8 @@ const DEFAULT_FILTER_SETTINGS: FilterSettings = {
         uploadDate: true,
     },
     workflowStages: {
-        brief: true,
-        review: true,
         final: true,
-        test: true,
+        live: true,
         stopped: true,
     },
     deploymentStatuses: {
@@ -125,7 +120,6 @@ const DEFAULT_FILTER_SETTINGS: FilterSettings = {
     fileTypes: {
         images: true,
         videos: true,
-        documents: true,
         templates: true,
         playables: true,
         endcards: true,
@@ -317,10 +311,8 @@ export function FilterSettingsModal({
     }
 
     const workflowLabels: Record<keyof FilterSettings['workflowStages'], string> = {
-        brief: "📋 Brief",
-        review: "👀 Nghiệm thu",
         final: "✅ Final",
-        test: "🧪 Test",
+        live: "🟢 Live",
         stopped: "⏹️ Stop",
     }
 
@@ -342,7 +334,6 @@ export function FilterSettingsModal({
     const fileTypeLabels: Record<keyof FilterSettings['fileTypes'], string> = {
         images: "🖼️ Images",
         videos: "🎬 Videos",
-        documents: "📄 Documents",
         templates: "📐 Templates",
         playables: "🎮 Playables",
         endcards: "🃏 Endcards",
@@ -654,7 +645,7 @@ export function FilterSettingsModal({
                                     </Button>
                                 )}
                             </div>
-                            {/* Built-in Campaigns from mockData */}
+                            {/* Built-in Campaigns from mock-data */}
                             <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
                                 {uniqueCampaigns.map((campaign) => (
                                     <div key={campaign} className="flex items-center">

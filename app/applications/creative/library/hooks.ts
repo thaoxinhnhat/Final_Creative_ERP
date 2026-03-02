@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
-import { mockAssets } from "./mockData"
+import { useState, useMemo, useCallback, useEffect } from "react"
+import { MOCK_BRIEFS, getBriefName } from "./mock-data"
+import { assetService } from "./service"
 import type {
   Asset,
+  Brief,
   AssetFilters,
   AssetType,
   AssetCategory,
@@ -13,19 +15,7 @@ import type {
   DeploymentStatus,
   AdNetwork,
   CreativeTeam,
-  DriveFileInfo
 } from "./types"
-import {
-  parseGoogleDriveUrl,
-  getMockDriveFileInfo,
-  parseAssetIdFromFilename,
-  detectAssetTypeFromExtension,
-  detectWorkflowStage,
-  findMatchingBriefId,
-  generateTagsFromParsedId,
-  fetchDriveFileWithThumbnail,
-  isValidDriveUrl,
-} from "./utils/driveParser"
 
 const defaultFilters: AssetFilters = {
   search: "",
@@ -34,152 +24,41 @@ const defaultFilters: AssetFilters = {
   tags: [],
   campaigns: [],
   sortBy: "newest",
-  workflowStages: ['final', 'review'], // Default: show Final assets (review merged into final)
+  workflowStages: ['final', 'live'], // Default: show Final and Live assets
   teams: [],
   adNetworks: [],
   performanceRatings: [],
   deploymentStatuses: [],
 }
 
-function detectFileType(ext: string): AssetType {
-  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']
-  const videoExts = ['mp4', 'mov', 'avi', 'webm']
-  const docExts = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx']
-  const templateExts = ['psd', 'ai', 'figma', 'sketch', 'xd']
-  const playableExts = ['html', 'htm', 'zip']
-
-  if (imageExts.includes(ext.toLowerCase())) return 'image'
-  if (videoExts.includes(ext.toLowerCase())) return 'video'
-  if (docExts.includes(ext.toLowerCase())) return 'document'
-  if (templateExts.includes(ext.toLowerCase())) return 'template'
-  if (playableExts.includes(ext.toLowerCase())) return 'playable'
-  return 'other'
-}
-
 export function useAssets() {
-  const [assets, setAssets] = useState<Asset[]>(mockAssets)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [briefs, setBriefs] = useState<Brief[]>([])
   const [filters, setFilters] = useState<AssetFilters>(defaultFilters)
   const [isLoading, setIsLoading] = useState(false)
 
-  // ============================================
-  // FILTERED ASSETS
-  // ============================================
-  const filteredAssets = useMemo(() => {
-    let result = [...assets]
-
-    // Search filter
-    if (filters.search) {
-      const search = filters.search.toLowerCase()
-      result = result.filter(a =>
-        a.name.toLowerCase().includes(search) ||
-        a.description?.toLowerCase().includes(search) ||
-        a.tags.some(t => t.toLowerCase().includes(search)) ||
-        a.campaignName?.toLowerCase().includes(search) ||
-        a.parsedAssetId?.toLowerCase().includes(search) ||
-        a.creatorCode?.toLowerCase().includes(search)
-      )
+  // Fetch assets when filters change
+  const fetchAssets = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data = await assetService.getAssets(filters)
+      setAssets(data)
+    } catch (error) {
+      console.error("Failed to fetch assets:", error)
+    } finally {
+      setIsLoading(false)
     }
+  }, [filters])
 
-    // Type filter
-    if (filters.types.length > 0) {
-      result = result.filter(a => filters.types.includes(a.type))
-    }
+  // Subscribing to filter changes
+  useEffect(() => {
+    fetchAssets()
+  }, [fetchAssets])
 
-    // Category filter
-    if (filters.categories.length > 0) {
-      result = result.filter(a => filters.categories.includes(a.category))
-    }
-
-    // Campaign filter
-    if (filters.campaigns.length > 0) {
-      result = result.filter(a => a.campaignName && filters.campaigns.includes(a.campaignName))
-    }
-
-    // Date range filter
-    if (filters.dateRange?.from) {
-      result = result.filter(a => new Date(a.uploadedAt) >= new Date(filters.dateRange!.from))
-    }
-    if (filters.dateRange?.to) {
-      result = result.filter(a => new Date(a.uploadedAt) <= new Date(filters.dateRange!.to))
-    }
-
-    // ============================================
-    // NEW FILTERS
-    // ============================================
-
-    // Workflow stage filter
-    if (filters.workflowStages && filters.workflowStages.length > 0) {
-      result = result.filter(a => a.workflowStage && filters.workflowStages!.includes(a.workflowStage))
-    }
-
-    // Team filter
-    if (filters.teams && filters.teams.length > 0) {
-      result = result.filter(a => a.team && filters.teams!.includes(a.team))
-    }
-
-    // Ad networks filter
-    if (filters.adNetworks && filters.adNetworks.length > 0) {
-      result = result.filter(a =>
-        a.uaTestStatus?.testedNetworks?.some(n => filters.adNetworks!.includes(n))
-      )
-    }
-
-    // Performance rating filter
-    if (filters.performanceRatings && filters.performanceRatings.length > 0) {
-      result = result.filter(a => {
-        if (!a.uaTestStatus?.performanceRating) return false
-        return Object.values(a.uaTestStatus.performanceRating).some(
-          rating => rating && filters.performanceRatings!.includes(rating)
-        )
-      })
-    }
-
-    // Test plan filter
-    if (filters.hasTestPlan !== undefined) {
-      result = result.filter(a => a.uaTestStatus?.isPlanned === filters.hasTestPlan)
-    }
-
-    // Deployment status filter
-    if (filters.deploymentStatuses && filters.deploymentStatuses.length > 0) {
-      result = result.filter(a =>
-        a.deploymentStatus && filters.deploymentStatuses!.includes(a.deploymentStatus)
-      )
-    }
-
-    // ============================================
-    // SORTING
-    // ============================================
-    switch (filters.sortBy) {
-      case "newest":
-        result.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-        break
-      case "oldest":
-        result.sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime())
-        break
-      case "name_asc":
-        result.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case "name_desc":
-        result.sort((a, b) => b.name.localeCompare(a.name))
-        break
-      case "size":
-        result.sort((a, b) => b.fileSize - a.fileSize)
-        break
-      case "downloads":
-        result.sort((a, b) => b.downloads - a.downloads)
-        break
-      case "performance":
-        // Sort by number of "good" ratings
-        result.sort((a, b) => {
-          const aGood = Object.values(a.uaTestStatus?.performanceRating || {}).filter(r => r === 'good').length
-          const bGood = Object.values(b.uaTestStatus?.performanceRating || {}).filter(r => r === 'good').length
-          return bGood - aGood
-        })
-        break
-    }
-
-    return result
-  }, [assets, filters])
+  // Fetch briefs once on mount
+  useEffect(() => {
+    assetService.getBriefs().then(setBriefs)
+  }, [])
 
   // ============================================
   // FILTER ACTIONS
@@ -224,364 +103,143 @@ export function useAssets() {
     }))
   }, [])
 
+  const toggleBriefsOnly = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      showBriefsOnly: !prev.showBriefsOnly
+    }))
+  }, [])
+
   // ============================================
   // ASSET CRUD OPERATIONS
   // ============================================
   const uploadAssets = useCallback(async (formData: UploadAssetFormData): Promise<Asset[]> => {
-    const newAssets: Asset[] = formData.files.map((file, index) => {
-      const ext = file.name.split('.').pop() || ''
-      return {
-        id: `asset_${Date.now()}_${index}`,
-        name: file.name,
-        type: detectFileType(ext),
-        category: formData.category,
-        fileUrl: URL.createObjectURL(file),
-        thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-        fileSize: file.size,
-        fileExtension: ext,
-        description: formData.description,
-        tags: formData.tags,
-        campaignName: formData.campaignName,
-        appName: formData.appName,
-        briefId: formData.briefId,
-        conceptId: formData.conceptId,
-        uploadedBy: "Creative Team",
-        uploadedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: "active",
-        downloads: 0,
-        views: 0,
-        workflowStage: formData.workflowStage || 'brief',
-        team: formData.team,
-        driveUrl: formData.driveUrl,
-        driveFileId: formData.driveFileId,
-        // New fields
-        productionTeam: formData.productionTeam,
-        themes: formData.themes,
-        youtubeUrl: formData.youtubeUrl,
-        assetPlatform: formData.assetPlatform,
-        // Date tracking
-        uploadSource: formData.driveUrl ? 'drive_import' : 'user_upload',
-      }
-    })
-    setAssets(prev => [...newAssets, ...prev])
-    return newAssets
-  }, [])
+    setIsLoading(true)
+    try {
+      const newAssets = await assetService.uploadAssets(formData)
+      // Optimistically update or re-fetch. Since we filter locally in service, re-fetch is safest but slower.
+      // Let's manually trigger a refresh
+      await fetchAssets()
+      return newAssets
+    } finally {
+      setIsLoading(false)
+    }
+  }, [fetchAssets])
 
-  // ============================================
-  // NEW: IMPORT FROM GOOGLE DRIVE
-  // ============================================
   const importFromDrive = useCallback(async (driveUrl: string): Promise<Asset | null> => {
     setIsLoading(true)
     try {
-      const parsed = parseGoogleDriveUrl(driveUrl)
-      if (!parsed) {
-        throw new Error('Invalid Google Drive URL')
-      }
-
-      // Get file info from Drive API (mock)
-      const fileInfo = await getMockDriveFileInfo(parsed.fileId)
-
-      // Parse asset ID from filename
-      const parsedId = parseAssetIdFromFilename(fileInfo.name)
-
-      // Auto-detect type and workflow stage
-      const ext = fileInfo.name.split('.').pop() || ''
-      const assetType = detectAssetTypeFromExtension(ext)
-
-      // Find matching brief
-      const briefId = findMatchingBriefId(parsedId)
-
-      // Generate tags
-      const autoTags = generateTagsFromParsedId(parsedId)
-
-      const newAsset: Asset = {
-        id: `asset_${Date.now()}_drive`,
-        name: fileInfo.name,
-        type: assetType,
-        category: 'final_creative',
-        fileUrl: fileInfo.webContentLink || fileInfo.webViewLink,
-        thumbnailUrl: fileInfo.thumbnailLink,
-        fileSize: fileInfo.size,
-        fileExtension: ext,
-        tags: autoTags,
-        uploadedBy: parsedId?.creatorCode || 'Drive Import',
-        uploadedAt: fileInfo.createdTime,
-        updatedAt: new Date().toISOString(),
-        status: 'active',
-        downloads: 0,
-        views: 0,
-        // Drive integration
-        driveUrl,
-        driveFileId: parsed.fileId,
-        // Workflow
-        workflowStage: 'brief',
-        // Parsed metadata
-        parsedAssetId: parsedId?.fullId,
-        projectCode: parsedId?.projectCode,
-        teamCode: parsedId?.teamCode,
-        creatorCode: parsedId?.creatorCode,
-        sequenceNumber: parsedId?.sequenceNumber,
-        team: parsedId?.team,
-        isCreativeAI: parsedId?.isCreativeAI,
-        // Auto-link
-        briefId,
-      }
-
-      // Auto-detect workflow stage
-      newAsset.workflowStage = detectWorkflowStage(newAsset)
-
-      setAssets(prev => [newAsset, ...prev])
+      const newAsset = await assetService.importFromDrive(driveUrl)
+      if (newAsset) await fetchAssets()
       return newAsset
-    } catch (error) {
-      console.error('Error importing from Drive:', error)
-      return null
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [fetchAssets])
 
-  // ============================================
-  // NEW: WORKFLOW MANAGEMENT
-  // ============================================
-  const updateWorkflowStage = useCallback((id: string, stage: WorkflowStage) => {
-    setAssets(prev => prev.map(a => {
-      if (a.id !== id) return a
-
-      const history = a.workflowHistory || []
-      history.push({
-        stage: a.workflowStage,
-        changedAt: new Date().toISOString(),
-        changedBy: 'User',
-      })
-
-      return {
-        ...a,
-        workflowStage: stage,
-        workflowHistory: history,
-        updatedAt: new Date().toISOString(),
-      }
-    }))
-  }, [])
-
-  // ============================================
-  // NEW: UA TESTING MANAGEMENT
-  // ============================================
-  const updateUATestStatus = useCallback((id: string, updates: Partial<UATestStatus>) => {
-    setAssets(prev => prev.map(a => {
-      if (a.id !== id) return a
-
-      const currentStatus = a.uaTestStatus || {
-        isPlanned: false,
-        testedNetworks: [],
-        performanceRating: {},
-      }
-
-      return {
-        ...a,
-        uaTestStatus: { ...currentStatus, ...updates },
-        updatedAt: new Date().toISOString(),
-      }
-    }))
-  }, [])
-
-  const setNetworkStatus = useCallback((id: string, network: AdNetwork, rating: 'good' | 'bad' | 'testing' | null) => {
-    setAssets(prev => prev.map(a => {
-      if (a.id !== id) return a
-
-      const currentStatus = a.uaTestStatus || {
-        isPlanned: false,
-        testedNetworks: [],
-        performanceRating: {},
-      }
-
-      let testedNetworks: AdNetwork[]
-      let newPerformanceRating = { ...currentStatus.performanceRating }
-      let newLiveNetworks = [...(a.liveNetworks || [])]
-
-      if (rating === null) {
-        // Removing rating - also remove from testedNetworks and liveNetworks
-        testedNetworks = currentStatus.testedNetworks.filter(n => n !== network)
-        delete newPerformanceRating[network]
-        newLiveNetworks = newLiveNetworks.filter(n => n !== network)
-      } else {
-        // Adding/updating rating
-        testedNetworks = currentStatus.testedNetworks.includes(network)
-          ? currentStatus.testedNetworks
-          : [...currentStatus.testedNetworks, network]
-        newPerformanceRating[network] = rating
-
-        // Only add to liveNetworks if asset is finalized (workflowStage === 'final')
-        const isFinalized = a.workflowStage === 'final'
-        if (isFinalized && !newLiveNetworks.includes(network)) {
-          newLiveNetworks = [...newLiveNetworks, network]
-        }
-      }
-
-      return {
-        ...a,
-        uaTestStatus: {
-          ...currentStatus,
-          testedNetworks,
-          performanceRating: newPerformanceRating,
-        },
-        liveNetworks: newLiveNetworks,
-        // Update deployment status based on remaining live networks
-        deploymentStatus: newLiveNetworks.length > 0 ? 'live' : (a.deploymentStatus === 'live' ? 'draft' : a.deploymentStatus),
-        updatedAt: new Date().toISOString(),
-      }
-    }))
-  }, [])
-
-  // ============================================
-  // NEW: DEPLOYMENT MANAGEMENT
-  // ============================================
-  const updateDeploymentStatus = useCallback((id: string, status: DeploymentStatus, stopReason?: string) => {
-    setAssets(prev => prev.map(a => {
-      if (a.id !== id) return a
-
-      const updates: Partial<Asset> = {
-        deploymentStatus: status,
-        updatedAt: new Date().toISOString(),
-      }
-
-      if (status === 'stopped') {
-        updates.stopReason = stopReason
-        updates.stoppedAt = new Date().toISOString()
-        updates.workflowStage = 'stopped'
-      }
-
-      if (status === 'live') {
-        updates.workflowStage = 'test'
-      }
-
-      return { ...a, ...updates }
-    }))
-  }, [])
-
-  const updateLiveNetworks = useCallback((id: string, networks: AdNetwork[]) => {
-    setAssets(prev => prev.map(a => {
-      if (a.id !== id) return a
-
-      const currentStatus = a.uaTestStatus || {
-        isPlanned: false,
-        testedNetworks: [],
-        performanceRating: {},
-      }
-
-      // Find networks that were removed from live
-      const removedFromLive = (a.liveNetworks || []).filter(n => !networks.includes(n))
-
-      // Also remove from testedNetworks and performanceRating
-      const newTestedNetworks = currentStatus.testedNetworks.filter(n => !removedFromLive.includes(n))
-      const newPerformanceRating = { ...currentStatus.performanceRating }
-      removedFromLive.forEach(n => delete newPerformanceRating[n])
-
-      // Check if this is the first time going live
-      const wasLive = (a.liveNetworks || []).length > 0
-      const isNowLive = networks.length > 0
-
-      return {
-        ...a,
-        liveNetworks: networks,
-        uaTestStatus: {
-          ...currentStatus,
-          testedNetworks: newTestedNetworks,
-          performanceRating: newPerformanceRating,
-        },
-        // Reset to 'draft' when all networks removed, set to 'live' when networks added
-        deploymentStatus: isNowLive ? 'live' : 'draft',
-        // Set liveAt timestamp when going live for the first time
-        liveAt: isNowLive && !a.liveAt ? new Date().toISOString() : (isNowLive ? a.liveAt : undefined),
-        updatedAt: new Date().toISOString(),
-      }
-    }))
-  }, [])
-
-  // ============================================
-  // OTHER OPERATIONS
-  // ============================================
-  const deleteAsset = useCallback((id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id))
-  }, [])
-
-  const incrementViews = useCallback((id: string) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a))
-  }, [])
-
-  const incrementDownloads = useCallback((id: string) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, downloads: a.downloads + 1 } : a))
-  }, [])
-
-  const updateAsset = useCallback((id: string, updates: Partial<Asset>) => {
+  const updateAsset = useCallback(async (id: string, updates: Partial<Asset>) => {
+    // Optimistic update
     setAssets(prev => prev.map(a =>
       a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a
     ))
+
+    // Background sync
+    const success = await assetService.updateAsset(id, updates)
+    if (!success) {
+      // Revert if failed (simplified: just refetch)
+      await fetchAssets()
+    }
+    return success
+  }, [fetchAssets])
+
+  const deleteAsset = useCallback(async (id: string) => {
+    setAssets(prev => prev.filter(a => a.id !== id)) // Optimistic
+    await assetService.deleteAsset(id)
+    await fetchAssets() // Sync
+  }, [fetchAssets])
+
+  const incrementViews = useCallback(async (id: string) => {
+    setAssets(prev => prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a))
+    await assetService.incrementViews(id)
   }, [])
 
-  // ============================================
-  // NEW: GOOGLE DRIVE INFO UPDATE
-  // ============================================
-  const updateDriveInfo = useCallback(async (id: string, driveUrl: string): Promise<boolean> => {
-    // Validate URL
-    if (!isValidDriveUrl(driveUrl)) {
-      console.error('Invalid Google Drive URL')
-      return false
-    }
-
-    setIsLoading(true)
-    try {
-      // Fetch Drive file info with thumbnail
-      const driveInfo = await fetchDriveFileWithThumbnail(driveUrl)
-
-      if (!driveInfo) {
-        console.error('Could not fetch Drive file info')
-        return false
-      }
-
-      // Update asset with Drive info and new thumbnail
-      setAssets(prev => prev.map(a => {
-        if (a.id !== id) return a
-
-        return {
-          ...a,
-          driveUrl,
-          driveFileId: driveInfo.fileId,
-          thumbnailUrl: driveInfo.thumbnailUrl, // Update thumbnail from Drive
-          updatedAt: new Date().toISOString(),
-        }
-      }))
-
-      return true
-    } catch (error) {
-      console.error('Error updating Drive info:', error)
-      return false
-    } finally {
-      setIsLoading(false)
-    }
+  const incrementDownloads = useCallback(async (id: string) => {
+    setAssets(prev => prev.map(a => a.id === id ? { ...a, downloads: a.downloads + 1 } : a))
+    await assetService.incrementDownloads(id)
   }, [])
 
-  // ============================================
-  // NEW: REMOVE DRIVE LINK
-  // ============================================
-  const removeDriveLink = useCallback((id: string) => {
+  const updateWorkflowStage = useCallback(async (id: string, stage: WorkflowStage) => {
+    await assetService.updateWorkflowStage(id, stage)
+    await fetchAssets()
+  }, [fetchAssets])
+
+  const updateUATestStatus = useCallback((id: string, updates: Partial<UATestStatus>) => {
     setAssets(prev => prev.map(a => {
       if (a.id !== id) return a
-
-      return {
-        ...a,
-        driveUrl: undefined,
-        driveFileId: undefined,
-        updatedAt: new Date().toISOString(),
-      }
-    }))
+      const currentStatus = a.uaTestStatus || { isPlanned: false, testedNetworks: [], performanceRating: {} }
+      return { ...a, uaTestStatus: { ...currentStatus, ...updates } }
+    })) // Optimistic
+    assetService.updateUATestStatus(id, updates)
   }, [])
 
+  const setNetworkStatus = useCallback(async (id: string, network: AdNetwork, rating: 'good' | 'bad' | 'testing' | null) => {
+    await assetService.setNetworkStatus(id, network, rating)
+    await fetchAssets()
+  }, [fetchAssets])
+
+  const updateDeploymentStatus = useCallback(async (id: string, status: DeploymentStatus, stopReason?: string) => {
+    await assetService.updateDeploymentStatus(id, status, stopReason)
+    await fetchAssets()
+  }, [fetchAssets])
+
+  const updateLiveNetworks = useCallback(async (id: string, networks: AdNetwork[]) => {
+    await assetService.updateLiveNetworks(id, networks)
+    await fetchAssets()
+  }, [fetchAssets])
+
+  const updateDriveInfo = useCallback(async (id: string, driveUrl: string) => {
+    const success = await assetService.updateDriveInfo(id, driveUrl)
+    if (success) await fetchAssets()
+    return success
+  }, [fetchAssets])
+
+  const removeDriveLink = useCallback(async (id: string) => {
+    await assetService.removeDriveLink(id)
+    await fetchAssets()
+  }, [fetchAssets])
+
   // ============================================
-  // STATS & GROUPING
-  // ============================================
+  // STATS - Calculated from current filtered view or full set?
+  // Service.getAssets filters data, so `assets` is filtered.
+  // Grouping should happen on `assets`.
+  // Wait, the previous hook calculated stats on `assets` (which was `mockAssets` array).
+  // If `assets` is now filtered, stats will reflect the filtered view.
+  // The original hook had `const filteredAssets = useMemo` vs `const [assets, setAssets]`.
+  // Originally `assets` was ALL assets, and `filteredAssets` was the subset.
+
+  // PROBLEM: If I fetch filtered assets from service, I lose the ability to calculate stats for the whole library unless I fetch all or ask service for stats.
+  // To keep it simple and match "refactor" goals:
+  // I should probably fetch ALL assets if I want client-side filtering (which means service logic is just a wrapper),
+  // OR strictly follow the plan where service does filtering.
+  // If service does filtering, I need `assetsByWorkflow` to be returned by service or just calculate it on what's visible.
+
+  // The UI likely expects `assets` to be the full list for some things, or `filteredAssets` for the view.
+  // The original hook exported `assets` (all) AND `filteredAssets` (view).
+  // If I move filtering to backend (service), `assets` becomes the result.
+  // If the UI relies on "Show All" stats while filtered, I need a separate stats endpoint.
+  // BUT: looking at original code, `assetsByWorkflow` was `mockAssets.filter...` no wait.
+  // `assetsByWorkflow` in original code used `assets` (the state).
+
+  // Let's keep CLIENT-SIDE filtering for now to minimize risk of breaking UI logic that expects all assets available for stats?
+  // NO, the plan said "Move filtering to service.ts". Use Case 1 demands data isolation.
+  // So `useAssets` should return `assets` which are the result of the query.
+  // If `assetsByWorkflow` is needed, it should probably be based on the CURRENT view or I need a `getStats` method.
+
+  // Let's assume `assetsByWorkflow` is used for the Kanban board columns.
+  // If I filter by "Type: Video", Kanban should show only Videos. So calculating from `assets` (which is filtered result) is correct behavior for a filtered view.
+
   const assetsByWorkflow = useMemo(() => {
-    const stages: WorkflowStage[] = ['brief', 'review', 'final', 'test', 'stopped']
+    const stages: WorkflowStage[] = ['final', 'live', 'stopped']
     return stages.reduce((acc, stage) => {
       acc[stage] = assets.filter(a => a.workflowStage === stage)
       return acc
@@ -593,13 +251,13 @@ export function useAssets() {
     return networks.reduce((acc, network) => {
       const withNetwork = assets.filter(a => a.uaTestStatus?.testedNetworks?.includes(network))
       acc[network] = {
-        total: withNetwork.length,
+        tested: withNetwork.length,
         good: withNetwork.filter(a => a.uaTestStatus?.performanceRating?.[network] === 'good').length,
         bad: withNetwork.filter(a => a.uaTestStatus?.performanceRating?.[network] === 'bad').length,
         testing: withNetwork.filter(a => a.uaTestStatus?.performanceRating?.[network] === 'testing').length,
       }
       return acc
-    }, {} as Record<AdNetwork, { total: number; good: number; bad: number; testing: number }>)
+    }, {} as Record<AdNetwork, { tested: number; good: number; bad: number; testing: number }>)
   }, [assets])
 
   const activeFilterCount = useMemo(() => {
@@ -607,55 +265,54 @@ export function useAssets() {
     if (filters.search) count++
     if (filters.types.length > 0) count++
     if (filters.categories.length > 0) count++
+    if (filters.tags.length > 0) count++
     if (filters.campaigns.length > 0) count++
-    if (filters.dateRange?.from || filters.dateRange?.to) count++
-    if (filters.workflowStages && filters.workflowStages.length > 0) count++
     if (filters.teams && filters.teams.length > 0) count++
     if (filters.adNetworks && filters.adNetworks.length > 0) count++
     if (filters.performanceRatings && filters.performanceRatings.length > 0) count++
     if (filters.deploymentStatuses && filters.deploymentStatuses.length > 0) count++
+    if (filters.hasTestPlan !== undefined) count++
+    if (filters.showBriefsOnly) count++
+    // Workflow filter is default so maybe don't count if it matches default? 
+    // Old logic likely counted it if it was different from default or just counted sections.
+    // Let's count it if it's not the default ['final', 'live']? Or just count if active.
+    // Simplifying: count if length > 0
+    if (filters.workflowStages && filters.workflowStages.length > 0) {
+      // Check if different from default?
+      const isDefault = filters.workflowStages.length === 2 && filters.workflowStages.includes('final') && filters.workflowStages.includes('live')
+      if (!isDefault) count++
+    }
     return count
   }, [filters])
 
   return {
-    // Data
-    assets: filteredAssets,
-    allAssets: assets,
+    assets, // This is now the FILTERED list corresponding to `filteredAssets` in old code
+    briefs, // Added briefs export
+    filteredAssets: assets, // Alias for compatibility if needed, but better to just use assets
+    activeFilterCount,
     filters,
     isLoading,
-
-    // Filter actions
     updateFilters,
     resetFilters,
     toggleTypeFilter,
     toggleCategoryFilter,
     toggleWorkflowFilter,
     toggleNetworkFilter,
-    activeFilterCount,
-
-    // CRUD
+    toggleBriefsOnly, // Added toggleBriefsOnly export
     uploadAssets,
+    importFromDrive,
     deleteAsset,
-    updateAsset,
     incrementViews,
     incrementDownloads,
-
-    // NEW: Drive import
-    importFromDrive,
+    updateAsset,
     updateDriveInfo,
     removeDriveLink,
-
-    // NEW: Workflow
     updateWorkflowStage,
-    assetsByWorkflow,
-
-    // NEW: UA Testing
     updateUATestStatus,
     setNetworkStatus,
-    performanceStats,
-
-    // NEW: Deployment
     updateDeploymentStatus,
     updateLiveNetworks,
+    assetsByWorkflow,
+    performanceStats,
   }
 }

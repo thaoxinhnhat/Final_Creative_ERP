@@ -15,12 +15,12 @@ import {
   FileText,
   Layers,
   Clock,
-  BarChart3,
   ChevronDown,
   HardDrive,
   FileArchive,
   GripVertical,
-  UserCog
+  UserCog,
+  Settings
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-import type { Asset, AssetFilters, WorkflowStage } from "./types"
+import type { Asset, AssetFilters, Brief, WorkflowStage, AssetType } from "./types"
 import { useAssets } from "./hooks"
 import { FilterPanel } from "./components/FilterPanel"
 import { AssetGrid } from "./components/AssetGrid"
@@ -39,36 +39,20 @@ import { AssetDetail } from "./components/AssetDetail"
 import { UploadModal } from "./components/UploadModal"
 import { KanbanBoard } from "./components/KanbanBoard"
 import { TimelineView } from "./components/TimelineView"
-import { PerformanceDashboard } from "./components/PerformanceDashboard"
 import { useFilterSettings } from "./components/FilterSettingsModal"
+import { LibrarySettingsModal, useLibrarySettings } from "./components/LibrarySettings"
 
-type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline' | 'dashboard'
-type LibraryType = 'media' | 'document'
+type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline'
+// type LibraryType = 'media' | 'document' // Removed
 
 const VIEW_CONFIG: Record<ViewMode, { label: string; icon: React.ReactNode }> = {
   grid: { label: "Grid", icon: <Grid className="h-4 w-4" /> },
   list: { label: "List", icon: <List className="h-4 w-4" /> },
   kanban: { label: "Kanban", icon: <Layers className="h-4 w-4" /> },
   timeline: { label: "Timeline", icon: <Clock className="h-4 w-4" /> },
-  dashboard: { label: "Dashboard", icon: <BarChart3 className="h-4 w-4" /> },
 }
 
-const LIBRARY_CONFIG: Record<LibraryType, {
-  label: string
-  icon: React.ReactNode
-  types: string[]
-}> = {
-  media: {
-    label: "Media Library",
-    icon: <HardDrive className="h-4 w-4" />,
-    types: ['image', 'video', 'playable', 'endcard']
-  },
-  document: {
-    label: "Document Library",
-    icon: <FileArchive className="h-4 w-4" />,
-    types: ['document', 'template', 'other']
-  }
-}
+const MEDIA_TYPES: AssetType[] = ['image', 'video', 'playable', 'endcard', 'template', 'other']
 
 // Min/max widths for resizable panels
 const FILTER_MIN_WIDTH = 200
@@ -82,9 +66,10 @@ const DETAIL_DEFAULT_WIDTH = 380
 export default function CreativeLibraryPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [libraryType, setLibraryType] = useState<LibraryType>('media')
+  // const [libraryType, setLibraryType] = useState<LibraryType>('media') // Removed Library Type
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [librarySettingsOpen, setLibrarySettingsOpen] = useState(false)
 
   // Resizable panel widths
   const [filterWidth, setFilterWidth] = useState(FILTER_DEFAULT_WIDTH)
@@ -98,9 +83,13 @@ export default function CreativeLibraryPage() {
   // Filter settings
   const { settings: filterSettings, saveSettings: saveFilterSettings } = useFilterSettings()
 
+  // Library settings (unified)
+  const { settings: librarySettings, saveSettings: saveLibrarySettings } = useLibrarySettings()
+
   const {
     assets,
-    allAssets,
+    briefs,
+
     filters,
     isLoading,
     updateFilters,
@@ -109,6 +98,7 @@ export default function CreativeLibraryPage() {
     toggleCategoryFilter,
     toggleWorkflowFilter,
     toggleNetworkFilter,
+    toggleBriefsOnly,
     uploadAssets,
     deleteAsset,
     incrementViews,
@@ -124,20 +114,13 @@ export default function CreativeLibraryPage() {
     updateLiveNetworks,
     updateDriveInfo,
     removeDriveLink,
+    updateAsset,
   } = useAssets()
 
-  // Derive selectedAsset from allAssets to keep it in sync after updates
+  // Derive selectedAsset from assets to keep it in sync after updates
   const selectedAsset = selectedAssetId
-    ? allAssets.find(a => a.id === selectedAssetId) || null
+    ? assets.find(a => a.id === selectedAssetId) || null
     : null
-
-  // Filter assets by library type
-  // For documents: ignore workflow filter, show all documents
-  // For media: apply workflow filter as normal
-  const libraryAssets = libraryType === 'document'
-    ? allAssets.filter(asset => LIBRARY_CONFIG[libraryType].types.includes(asset.type))
-      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-    : assets.filter(asset => LIBRARY_CONFIG[libraryType].types.includes(asset.type))
 
   const handleSelectAsset = (asset: Asset) => {
     setSelectedAssetId(asset.id)
@@ -175,6 +158,10 @@ export default function CreativeLibraryPage() {
 
   const handleMoveAsset = (assetId: string, newStage: WorkflowStage) => {
     updateWorkflowStage(assetId, newStage)
+  }
+
+  const handleClickBrief = (brief: Brief) => {
+    router.push(`/applications/erp-report/briefs/${brief.id}`)
   }
 
   // Resize handlers for Filter Panel
@@ -225,9 +212,7 @@ export default function CreativeLibraryPage() {
     document.addEventListener('mouseup', handleMouseUp)
   }, [detailWidth])
 
-  // Count by library type
-  const mediaCount = allAssets.filter(a => LIBRARY_CONFIG.media.types.includes(a.type)).length
-  const documentCount = allAssets.filter(a => LIBRARY_CONFIG.document.types.includes(a.type)).length
+
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
@@ -253,20 +238,7 @@ export default function CreativeLibraryPage() {
 
           <div className="flex items-center gap-3">
             {/* Library Type Tabs */}
-            <Tabs value={libraryType} onValueChange={(v) => setLibraryType(v as LibraryType)}>
-              <TabsList className="h-9">
-                <TabsTrigger value="media" className="gap-2 text-xs px-3">
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  Media
-                  <Badge variant="secondary" className="ml-1 text-[10px]">{mediaCount}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="document" className="gap-2 text-xs px-3">
-                  <FileText className="h-3.5 w-3.5" />
-                  Documents
-                  <Badge variant="secondary" className="ml-1 text-[10px]">{documentCount}</Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+
 
             <Separator orientation="vertical" className="h-6" />
 
@@ -324,9 +296,14 @@ export default function CreativeLibraryPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Button variant="outline" onClick={() => setLibrarySettingsOpen(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Cài đặt
+            </Button>
+
             <Button onClick={() => setUploadModalOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
-              {libraryType === 'media' ? 'Import từ Drive' : 'Thêm tài liệu'}
+              Import từ Drive
             </Button>
           </div>
         </div>
@@ -335,7 +312,7 @@ export default function CreativeLibraryPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex">
         {/* Left: Resizable Filter Panel */}
-        {!['dashboard', 'kanban'].includes(viewMode) && (
+        {viewMode !== 'kanban' && (
           <div
             className="flex-shrink-0 flex"
             style={{ width: filterWidth }}
@@ -350,9 +327,12 @@ export default function CreativeLibraryPage() {
                 onToggleWorkflow={toggleWorkflowFilter}
                 onToggleNetwork={toggleNetworkFilter}
                 activeFilterCount={activeFilterCount}
-                filterSettings={filterSettings}
+                filterSettings={librarySettings.filters}
                 onSaveFilterSettings={saveFilterSettings}
                 userRole={userRole}
+                showBriefsOnly={filters.showBriefsOnly}
+                onToggleBriefsOnly={toggleBriefsOnly}
+                briefCount={briefs.length}
               />
             </div>
             {/* Resize Handle */}
@@ -372,12 +352,16 @@ export default function CreativeLibraryPage() {
         <div className="flex-1 overflow-hidden">
           {viewMode === 'grid' || viewMode === 'list' ? (
             <AssetGrid
-              assets={libraryAssets}
+              assets={assets}
+              briefs={briefs}
               viewMode={viewMode}
               isLoading={isLoading}
               selectedId={selectedAsset?.id || null}
               onSelectAsset={handleSelectAsset}
               onDownload={handleDownload}
+              onClickBrief={handleClickBrief}
+              showBriefsOnly={filters.showBriefsOnly || false}
+              onToggleBriefsOnly={toggleBriefsOnly}
               sortBy={filters.sortBy}
               onSortChange={(sortBy: AssetFilters['sortBy']) => updateFilters({ sortBy })}
             />
@@ -393,17 +377,9 @@ export default function CreativeLibraryPage() {
           ) : viewMode === 'timeline' ? (
             <div className="h-full overflow-auto">
               <TimelineView
-                assets={libraryAssets}
+                assets={assets}
                 onSelectAsset={handleSelectAsset}
                 selectedId={selectedAsset?.id}
-              />
-            </div>
-          ) : viewMode === 'dashboard' ? (
-            <div className="h-full overflow-auto">
-              <PerformanceDashboard
-                assets={allAssets}
-                performanceStats={performanceStats}
-                assetsByWorkflow={assetsByWorkflow}
               />
             </div>
           ) : null}
@@ -418,6 +394,9 @@ export default function CreativeLibraryPage() {
         onOpenChange={setUploadModalOpen}
         onUpload={handleUpload}
         onImportFromDrive={handleImportFromDrive}
+        appList={librarySettings.dropdowns.apps}
+        gameList={librarySettings.dropdowns.games}
+        productionTeamList={librarySettings.dropdowns.productionTeams}
       />
 
       {/* Asset Detail Popup */}
@@ -433,7 +412,17 @@ export default function CreativeLibraryPage() {
         onUpdateLiveNetworks={(networks) => selectedAsset && updateLiveNetworks(selectedAsset.id, networks)}
         onUpdateDriveInfo={(driveUrl) => selectedAsset ? updateDriveInfo(selectedAsset.id, driveUrl) : Promise.resolve(false)}
         onRemoveDriveLink={() => selectedAsset && removeDriveLink(selectedAsset.id)}
+        onUpdateAsset={updateAsset}
         isUpdatingDrive={isLoading}
+        userRole={userRole}
+      />
+
+      {/* Library Settings Modal */}
+      <LibrarySettingsModal
+        open={librarySettingsOpen}
+        onOpenChange={setLibrarySettingsOpen}
+        settings={librarySettings}
+        onSaveSettings={saveLibrarySettings}
         userRole={userRole}
       />
     </div>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import type { Asset, WorkflowStage, CreativeTeam } from "../types"
 import { WORKFLOW_STAGE_CONFIG, AD_NETWORK_CONFIG, TEAM_CONFIG } from "../types"
-import { MOCK_BRIEFS } from "../mockData"
+import { MOCK_BRIEFS } from "../mock-data"
 import {
     GripVertical, Clock, User, FolderOpen, FileText,
     ChevronDown, ChevronRight, Search, Filter, X
@@ -22,8 +22,8 @@ interface KanbanBoardProps {
     selectedId?: string | null
 }
 
-// Updated workflow order - removed 'review'
-const WORKFLOW_ORDER: WorkflowStage[] = ['brief', 'final', 'test', 'stopped']
+// Library status: Final → Live → Stopped
+const WORKFLOW_ORDER: WorkflowStage[] = ['final', 'live', 'stopped']
 
 export function KanbanBoard({
     assetsByWorkflow,
@@ -84,11 +84,11 @@ export function KanbanBoard({
     const getAssetsByBrief = (stage: WorkflowStage) => {
         let stageAssets = filterAssets(assetsByWorkflow[stage] || [])
 
-        // Merge 'review' assets into 'final' column
-        if (stage === 'final') {
-            const reviewAssets = filterAssets(assetsByWorkflow['review'] || [])
-            stageAssets = [...stageAssets, ...reviewAssets]
-        }
+        // Merge 'review' assets into 'final' column - NO LONGER NEEDED, display separately
+        // if (stage === 'final') {
+        //     const reviewAssets = filterAssets(assetsByWorkflow['review'] || [])
+        //     stageAssets = [...stageAssets, ...reviewAssets]
+        // }
 
         const grouped: Record<string, Asset[]> = {}
         const ungrouped: Asset[] = []

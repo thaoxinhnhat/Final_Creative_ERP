@@ -110,6 +110,11 @@ export function AssetCard({ asset, viewMode = 'grid', isSelected = false, onClic
                 {TEAM_CONFIG[asset.team].icon}
               </Badge>
             )}
+            {asset.briefName && (
+              <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-200 bg-blue-50">
+                📋 {asset.briefName.length > 15 ? asset.briefName.substring(0, 15) + '...' : asset.briefName}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -245,6 +250,13 @@ export function AssetCard({ asset, viewMode = 'grid', isSelected = false, onClic
           {asset.team && (
             <Badge variant="outline" className={cn("text-[10px] px-1", TEAM_CONFIG[asset.team].color)}>
               {TEAM_CONFIG[asset.team].icon} {TEAM_CONFIG[asset.team].label}
+            </Badge>
+          )}
+
+          {/* Brief Badge */}
+          {asset.briefName && (
+            <Badge variant="outline" className="text-[10px] px-1 text-blue-600 border-blue-200 bg-blue-50">
+              📋 {asset.briefName.length > 12 ? asset.briefName.substring(0, 12) + '...' : asset.briefName}
             </Badge>
           )}
 

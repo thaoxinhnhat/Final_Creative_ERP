@@ -22,6 +22,10 @@ interface UploadModalProps {
   onOpenChange: (open: boolean) => void
   onUpload: (data: UploadAssetFormData) => Promise<void>
   onImportFromDrive?: (driveUrl: string) => Promise<void>
+  // Optional dropdown lists from LibrarySettings
+  appList?: string[]
+  gameList?: string[]
+  productionTeamList?: string[]
 }
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
@@ -145,7 +149,16 @@ function EditableList({
   )
 }
 
-export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }: UploadModalProps) {
+export function UploadModal({
+  open,
+  onOpenChange,
+  onUpload,
+  onImportFromDrive,
+  appList = DEFAULT_APP_LIST,
+  gameList = DEFAULT_GAME_LIST,
+  productionTeamList = DEFAULT_PRODUCTION_TEAMS
+}: UploadModalProps) {
+  const teamList = productionTeamList // Alias for compatibility
   const [activeTab, setActiveTab] = useState<"upload" | "drive">("upload")
   const [files, setFiles] = useState<File[]>([])
   const [category, setCategory] = useState<AssetCategory | "">("")
@@ -179,30 +192,14 @@ export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }:
   const [currentDriveInput, setCurrentDriveInput] = useState("")
   const [driveImportedFiles, setDriveImportedFiles] = useState<Array<{ name: string; url: string; size: number; thumbnailUrl: string }>>([])
 
-  // Settings state
-  const [showSettings, setShowSettings] = useState(false)
-  const [appList, setAppList] = useState<string[]>(DEFAULT_APP_LIST)
-  const [gameList, setGameList] = useState<string[]>(DEFAULT_GAME_LIST)
-  const [teamList, setTeamList] = useState<string[]>(DEFAULT_PRODUCTION_TEAMS)
+  // Brief information
+  const [briefName, setBriefName] = useState("")
+  const [briefLink, setBriefLink] = useState("")
 
-  // Load settings from localStorage
-  useEffect(() => {
-    const savedApps = localStorage.getItem(STORAGE_KEYS.apps)
-    const savedGames = localStorage.getItem(STORAGE_KEYS.games)
-    const savedTeams = localStorage.getItem(STORAGE_KEYS.teams)
+  // Project information
+  const [projectCode, setProjectCode] = useState("")
 
-    if (savedApps) setAppList(JSON.parse(savedApps))
-    if (savedGames) setGameList(JSON.parse(savedGames))
-    if (savedTeams) setTeamList(JSON.parse(savedTeams))
-  }, [])
-
-  // Save settings to localStorage
-  const saveSettings = () => {
-    localStorage.setItem(STORAGE_KEYS.apps, JSON.stringify(appList))
-    localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(gameList))
-    localStorage.setItem(STORAGE_KEYS.teams, JSON.stringify(teamList))
-    setShowSettings(false)
-  }
+  // Settings state - removed, now using props from LibrarySettings
 
   const handleFiles = useCallback((newFiles: File[]) => {
     const validFiles = newFiles.filter(file => file.size <= MAX_FILE_SIZE)
@@ -305,6 +302,9 @@ export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }:
     setDriveUrls([])
     setCurrentDriveInput("")
     setDriveImportedFiles([])
+    setBriefName("")
+    setBriefLink("")
+    setProjectCode("")
   }
 
   const getFinalAppGameName = () => {
@@ -339,7 +339,10 @@ export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }:
         themes: themes.length > 0 ? themes : undefined,
         youtubeUrl: youtubeUrls.length > 0 ? youtubeUrls[0] : undefined, // Use first for backward compatibility
         driveUrl: driveUrls.length > 0 ? driveUrls[0] : undefined,
-      } as UploadAssetFormData)
+        briefId: briefLink || undefined,
+        briefName: briefName || undefined,
+        projectCode: projectCode || undefined,
+      } as UploadAssetFormData & { briefName?: string; projectCode?: string })
       resetForm()
       onOpenChange(false)
     } finally {
@@ -528,7 +531,6 @@ export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }:
         onOpenChange(o)
         if (!o) {
           resetForm()
-          setShowSettings(false)
         }
       }
     }}>
@@ -537,376 +539,342 @@ export function UploadModal({ open, onOpenChange, onUpload, onImportFromDrive }:
         driveImportedFiles.length > 0 ? "max-w-5xl w-[95vw]" : "max-w-2xl"
       )}>
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Upload Assets</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSettings(!showSettings)}
-              className={cn(
-                "flex items-center gap-2",
-                showSettings && "bg-blue-100 dark:bg-blue-900"
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-          </div>
+          <DialogTitle>Upload Assets</DialogTitle>
         </DialogHeader>
 
-        {/* Settings Panel */}
-        {showSettings && (
-          <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-sm">Cài đặt lựa chọn dropdown</h3>
-              <Button size="sm" onClick={saveSettings}>
-                Lưu Settings
-              </Button>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "upload" | "drive")}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="upload" className="flex items-center gap-2">
+              <FileUp className="h-4 w-4" />
+              Upload Files
+            </TabsTrigger>
+            <TabsTrigger value="drive" className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Google Drive
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Upload Tab */}
+          <TabsContent value="upload" className="space-y-4 mt-4">
+            {/* Drop zone / Image preview */}
+            {driveImportedFiles.length > 0 ? (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Hình ảnh từ Drive ({driveImportedFiles.length})</Label>
+                <div className="flex gap-3 overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border">
+                  {driveImportedFiles.map((df, i) => (
+                    <div key={i} className="relative shrink-0 w-32 h-24 rounded-lg overflow-hidden border-2 border-blue-300">
+                      <img
+                        src={df.thumbnailUrl}
+                        alt={df.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+                        {df.url.substring(0, 25)}...
+                      </div>
+                    </div>
+                  ))}
+                  {/* Add more button */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="shrink-0 w-32 h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition"
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground mt-1">Thêm file</span>
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) handleFiles(Array.from(e.target.files))
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition",
+                  isDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-300 hover:border-gray-400"
+                )}
+              >
+                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm">{isDragging ? "Drop files here..." : "Drag & drop files here, or click to browse"}</p>
+                <p className="text-xs text-muted-foreground mt-1">Max 100MB per file</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) handleFiles(Array.from(e.target.files))
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+            )}
+
+            {/* File list with Name, Type, Size */}
+            {files.length > 0 && (
+              <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border">
+                <Label className="font-medium">Thông tin File ({files.length})</Label>
+                <div className="max-h-32 overflow-y-auto space-y-2">
+                  {files.map((file, i) => {
+                    const ext = file.name.split('.').pop()?.toUpperCase() || 'N/A'
+                    const isDriveFile = file.name.startsWith('drive-import-')
+                    const driveFileInfo = isDriveFile ? driveImportedFiles.find(df => df.name === file.name) : null
+                    return (
+                      <div key={i} className={cn(
+                        "flex items-center gap-3 p-2 rounded border text-sm",
+                        isDriveFile
+                          ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800"
+                          : "bg-white dark:bg-gray-800"
+                      )}>
+                        {isDriveFile && (
+                          <div className="shrink-0 text-blue-600">
+                            <Link2 className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">
+                            {isDriveFile ? "Imported từ Drive" : "File Name"}
+                          </p>
+                          <p className="truncate font-medium">{isDriveFile && driveFileInfo ? driveFileInfo.url : file.name}</p>
+                        </div>
+                        <div className="text-center px-3 border-l">
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Type</p>
+                          <p className="font-medium">{ext}</p>
+                        </div>
+                        <div className="text-center px-3 border-l">
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Size</p>
+                          <p className="font-medium">{formatFileSize(file.size)}</p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => removeFile(i)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Platform Selection */}
+            {renderPlatformSelection()}
+
+            {/* Row 1: Category + Team Dựng */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="mb-1 block">Category</Label>
+                <Select value={category} onValueChange={(v) => setCategory(v as AssetCategory)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn danh mục..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(CATEGORY_CONFIG) as AssetCategory[]).map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {CATEGORY_CONFIG[cat].icon} {CATEGORY_CONFIG[cat].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1 block">Team Dựng</Label>
+                <Select value={productionTeam} onValueChange={setProductionTeam}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn team dựng..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamList.map(t => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left text-sm font-medium py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-2">
-                <ChevronDown className="h-4 w-4" />
-                📱 Danh sách App
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 pt-2">
-                <EditableList
-                  items={appList}
-                  onItemsChange={setAppList}
-                  placeholder="Thêm tên app mới..."
-                />
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left text-sm font-medium py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-2">
-                <ChevronDown className="h-4 w-4" />
-                🎮 Danh sách Game
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 pt-2">
-                <EditableList
-                  items={gameList}
-                  onItemsChange={setGameList}
-                  placeholder="Thêm tên game mới..."
-                />
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left text-sm font-medium py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-2">
-                <ChevronDown className="h-4 w-4" />
-                👥 Danh sách Team Dựng
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 pt-2">
-                <EditableList
-                  items={teamList}
-                  onItemsChange={setTeamList}
-                  placeholder="Thêm team mới..."
-                />
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        )}
-
-        {!showSettings && (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "upload" | "drive")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upload" className="flex items-center gap-2">
-                <FileUp className="h-4 w-4" />
-                Upload Files
-              </TabsTrigger>
-              <TabsTrigger value="drive" className="flex items-center gap-2">
-                <Link2 className="h-4 w-4" />
-                Google Drive
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Upload Tab */}
-            <TabsContent value="upload" className="space-y-4 mt-4">
-              {/* Drop zone / Image preview */}
-              {driveImportedFiles.length > 0 ? (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Hình ảnh từ Drive ({driveImportedFiles.length})</Label>
-                  <div className="flex gap-3 overflow-x-auto p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border">
-                    {driveImportedFiles.map((df, i) => (
-                      <div key={i} className="relative shrink-0 w-32 h-24 rounded-lg overflow-hidden border-2 border-blue-300">
-                        <img
-                          src={df.thumbnailUrl}
-                          alt={df.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                          {df.url.substring(0, 25)}...
-                        </div>
-                      </div>
+            {/* Row 2: Workflow Stage + Campaign */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="mb-1 block">Workflow Stage</Label>
+                <Select value={workflowStage} onValueChange={(v) => setWorkflowStage(v as WorkflowStage)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(WORKFLOW_STAGE_CONFIG) as WorkflowStage[]).map((stage) => (
+                      <SelectItem key={stage} value={stage}>
+                        {WORKFLOW_STAGE_CONFIG[stage].icon} {WORKFLOW_STAGE_CONFIG[stage].label}
+                      </SelectItem>
                     ))}
-                    {/* Add more button */}
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="shrink-0 w-32 h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition"
-                    >
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground mt-1">Thêm file</span>
-                    </div>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files) handleFiles(Array.from(e.target.files))
-                      e.target.value = ""
-                    }}
-                  />
-                </div>
-              ) : (
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition",
-                    isDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-300 hover:border-gray-400"
-                  )}
-                >
-                  <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm">{isDragging ? "Drop files here..." : "Drag & drop files here, or click to browse"}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Max 100MB per file</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files) handleFiles(Array.from(e.target.files))
-                      e.target.value = ""
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* File list with Name, Type, Size */}
-              {files.length > 0 && (
-                <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border">
-                  <Label className="font-medium">Thông tin File ({files.length})</Label>
-                  <div className="max-h-32 overflow-y-auto space-y-2">
-                    {files.map((file, i) => {
-                      const ext = file.name.split('.').pop()?.toUpperCase() || 'N/A'
-                      const isDriveFile = file.name.startsWith('drive-import-')
-                      const driveFileInfo = isDriveFile ? driveImportedFiles.find(df => df.name === file.name) : null
-                      return (
-                        <div key={i} className={cn(
-                          "flex items-center gap-3 p-2 rounded border text-sm",
-                          isDriveFile
-                            ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800"
-                            : "bg-white dark:bg-gray-800"
-                        )}>
-                          {isDriveFile && (
-                            <div className="shrink-0 text-blue-600">
-                              <Link2 className="h-5 w-5" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">
-                              {isDriveFile ? "Imported từ Drive" : "File Name"}
-                            </p>
-                            <p className="truncate font-medium">{isDriveFile && driveFileInfo ? driveFileInfo.url : file.name}</p>
-                          </div>
-                          <div className="text-center px-3 border-l">
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Type</p>
-                            <p className="font-medium">{ext}</p>
-                          </div>
-                          <div className="text-center px-3 border-l">
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Size</p>
-                            <p className="font-medium">{formatFileSize(file.size)}</p>
-                          </div>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => removeFile(i)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Platform Selection */}
-              {renderPlatformSelection()}
-
-              {/* Row 1: Category + Team Dựng */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="mb-1 block">Category</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as AssetCategory)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn danh mục..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(CATEGORY_CONFIG) as AssetCategory[]).map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {CATEGORY_CONFIG[cat].icon} {CATEGORY_CONFIG[cat].label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="mb-1 block">Team Dựng</Label>
-                  <Select value={productionTeam} onValueChange={setProductionTeam}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn team dựng..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamList.map(t => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Row 2: Workflow Stage + Campaign */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="mb-1 block">Workflow Stage</Label>
-                  <Select value={workflowStage} onValueChange={(v) => setWorkflowStage(v as WorkflowStage)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(WORKFLOW_STAGE_CONFIG) as WorkflowStage[]).map((stage) => (
-                        <SelectItem key={stage} value={stage}>
-                          {WORKFLOW_STAGE_CONFIG[stage].icon} {WORKFLOW_STAGE_CONFIG[stage].label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="mb-1 block">Campaign/App Name</Label>
-                  <Input
-                    placeholder="VD: Summer Campaign 2025"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Theme - Tag input style */}
               <div>
-                <Label className="mb-1 block">Theme</Label>
-                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
-                  {themes.map((theme, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 cursor-pointer flex items-center gap-1"
-                      onClick={() => removeTheme(theme)}
-                    >
-                      {theme}
-                      <X className="h-3 w-3" />
-                    </Badge>
-                  ))}
-                  <Input
-                    placeholder={themes.length === 0 ? "Nhập theme và nhấn Enter..." : ""}
-                    value={themeInput}
-                    onChange={(e) => setThemeInput(e.target.value)}
-                    onKeyDown={handleThemeKeyDown}
-                    onBlur={addTheme}
-                    className="flex-1 min-w-[120px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Nhấn Enter hoặc dấu phẩy để thêm theme</p>
-              </div>
-
-              {/* YouTube Links - Multiple with duplicate detection */}
-              <div>
-                <Label className="flex items-center gap-2 mb-1">
-                  <Youtube className="h-4 w-4 text-red-600" />
-                  Link YouTube (có thể thêm nhiều link)
-                </Label>
-                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
-                  {youtubeUrls.map((url, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 cursor-pointer flex items-center gap-1 max-w-[200px]"
-                      onClick={() => removeYoutubeUrl(url)}
-                    >
-                      <span className="truncate">{url.length > 30 ? url.substring(0, 30) + '...' : url}</span>
-                      <X className="h-3 w-3 shrink-0" />
-                    </Badge>
-                  ))}
-                  <Input
-                    placeholder={youtubeUrls.length === 0 ? "Paste link YouTube và nhấn Enter..." : "Thêm link..."}
-                    value={youtubeInput}
-                    onChange={(e) => setYoutubeInput(e.target.value)}
-                    onKeyDown={handleYoutubeKeyDown}
-                    onBlur={addYoutubeUrl}
-                    className="flex-1 min-w-[150px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Nhấn Enter để thêm link. Trùng sẽ bị cảnh báo.</p>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <Label className="mb-1 block">Tags</Label>
-                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
-                  {tags.map((tag, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 cursor-pointer flex items-center gap-1"
-                      onClick={() => removeTag(tag)}
-                    >
-                      {tag}
-                      <X className="h-3 w-3" />
-                    </Badge>
-                  ))}
-                  <Input
-                    placeholder={tags.length === 0 ? "Nhập tag và nhấn Enter..." : ""}
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    onBlur={addTag}
-                    className="flex-1 min-w-[120px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Nhấn Enter hoặc dấu phẩy để thêm tag</p>
-              </div>
-
-              {/* Description */}
-              <div>
-                <Label className="mb-1 block">Description</Label>
-                <Textarea
-                  placeholder="Mô tả ngắn về asset này..."
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                <Label className="mb-1 block">Campaign/App Name</Label>
+                <Input
+                  placeholder="VD: Summer Campaign 2025"
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
                 />
               </div>
-            </TabsContent>
+            </div>
 
-            {/* Drive Import Tab */}
-            <TabsContent value="drive" className="mt-4 space-y-4">
-              <DriveImportTab
-                onImport={handleDriveImport}
-                isLoading={isUploading}
-                driveUrl={currentDriveInput}
-                onDriveUrlChange={setCurrentDriveInput}
+            {/* Row 3: Project + Brief Information */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="mb-1 block flex items-center gap-1.5">
+                  📁 Mã Project
+                </Label>
+                <Input
+                  placeholder="VD: SP01, SP02..."
+                  value={projectCode}
+                  onChange={(e) => setProjectCode(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label className="mb-1 block flex items-center gap-1.5">
+                  📋 Tên Brief
+                </Label>
+                <Input
+                  placeholder="VD: Gaming App - Q4 UA"
+                  value={briefName}
+                  onChange={(e) => setBriefName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label className="mb-1 block flex items-center gap-1.5">
+                  🔗 Link Brief
+                </Label>
+                <Input
+                  placeholder="VD: brief_001 hoặc link"
+                  value={briefLink}
+                  onChange={(e) => setBriefLink(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Theme - Tag input style */}
+            <div>
+              <Label className="mb-1 block">Theme</Label>
+              <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
+                {themes.map((theme, i) => (
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 cursor-pointer flex items-center gap-1"
+                    onClick={() => removeTheme(theme)}
+                  >
+                    {theme}
+                    <X className="h-3 w-3" />
+                  </Badge>
+                ))}
+                <Input
+                  placeholder={themes.length === 0 ? "Nhập theme và nhấn Enter..." : ""}
+                  value={themeInput}
+                  onChange={(e) => setThemeInput(e.target.value)}
+                  onKeyDown={handleThemeKeyDown}
+                  onBlur={addTheme}
+                  className="flex-1 min-w-[120px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Nhấn Enter hoặc dấu phẩy để thêm theme</p>
+            </div>
+
+            {/* YouTube Links - Multiple with duplicate detection */}
+            <div>
+              <Label className="flex items-center gap-2 mb-1">
+                <Youtube className="h-4 w-4 text-red-600" />
+                Link YouTube (có thể thêm nhiều link)
+              </Label>
+              <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
+                {youtubeUrls.map((url, i) => (
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 cursor-pointer flex items-center gap-1 max-w-[200px]"
+                    onClick={() => removeYoutubeUrl(url)}
+                  >
+                    <span className="truncate">{url.length > 30 ? url.substring(0, 30) + '...' : url}</span>
+                    <X className="h-3 w-3 shrink-0" />
+                  </Badge>
+                ))}
+                <Input
+                  placeholder={youtubeUrls.length === 0 ? "Paste link YouTube và nhấn Enter..." : "Thêm link..."}
+                  value={youtubeInput}
+                  onChange={(e) => setYoutubeInput(e.target.value)}
+                  onKeyDown={handleYoutubeKeyDown}
+                  onBlur={addYoutubeUrl}
+                  className="flex-1 min-w-[150px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Nhấn Enter để thêm link. Trùng sẽ bị cảnh báo.</p>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <Label className="mb-1 block">Tags</Label>
+              <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border min-h-[42px] flex-wrap">
+                {tags.map((tag, i) => (
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 cursor-pointer flex items-center gap-1"
+                    onClick={() => removeTag(tag)}
+                  >
+                    {tag}
+                    <X className="h-3 w-3" />
+                  </Badge>
+                ))}
+                <Input
+                  placeholder={tags.length === 0 ? "Nhập tag và nhấn Enter..." : ""}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={addTag}
+                  className="flex-1 min-w-[120px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder:text-gray-400 h-7 p-0"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Nhấn Enter hoặc dấu phẩy để thêm tag</p>
+            </div>
+
+            {/* Description */}
+            <div>
+              <Label className="mb-1 block">Description</Label>
+              <Textarea
+                placeholder="Mô tả ngắn về asset này..."
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
-            </TabsContent>
-          </Tabs>
-        )}
+            </div>
+          </TabsContent>
 
-        {activeTab === "upload" && !showSettings && (
+          {/* Drive Import Tab */}
+          <TabsContent value="drive" className="mt-4 space-y-4">
+            <DriveImportTab
+              onImport={handleDriveImport}
+              isLoading={isUploading}
+              driveUrl={currentDriveInput}
+              onDriveUrlChange={setCurrentDriveInput}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {activeTab === "upload" && (
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
               Cancel
