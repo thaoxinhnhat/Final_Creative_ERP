@@ -42,9 +42,6 @@ interface FilterPanelProps {
   filterSettings?: LibrarySettingsData['filters']
   onSaveFilterSettings?: (settings: LibrarySettingsData['filters']) => void
   userRole?: 'ua_team' | 'creative_team' | 'admin'
-  showBriefsOnly?: boolean
-  onToggleBriefsOnly?: () => void
-  briefCount?: number
 }
 
 export function FilterPanel({
@@ -59,9 +56,6 @@ export function FilterPanel({
   filterSettings = DEFAULT_LIBRARY_SETTINGS.filters,
   onSaveFilterSettings,
   userRole = 'creative_team',
-  showBriefsOnly = false,
-  onToggleBriefsOnly,
-  briefCount = 0,
 }: FilterPanelProps) {
   const [expandedSections, setExpandedSections] = useState({
     type: true,
@@ -71,7 +65,6 @@ export function FilterPanel({
     team: false,
     deployment: false,
     campaign: false,
-    briefs: true,
     date: false,
   })
 
@@ -425,38 +418,6 @@ export function FilterPanel({
                   </Label>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Briefs Filter */}
-        <div className="space-y-2">
-          <SectionHeader
-            title="📋 Briefs"
-            section="briefs"
-            count={showBriefsOnly ? 1 : 0}
-          />
-          {expandedSections.briefs && (
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center">
-                <Checkbox
-                  id="briefs-only"
-                  checked={showBriefsOnly}
-                  onCheckedChange={() => onToggleBriefsOnly?.()}
-                />
-                <Label
-                  htmlFor="briefs-only"
-                  className="ml-2 text-xs cursor-pointer flex-1 flex items-center gap-1"
-                >
-                  <ClipboardList className="h-3 w-3 text-purple-500" />
-                  <span>Chỉ hiển thị Briefs</span>
-                  <Badge variant="secondary" className="ml-1 text-[10px] bg-purple-100 text-purple-700">
-                    {briefCount}
-                  </Badge>
-                </Label>
-              </div>
             </div>
           )}
         </div>

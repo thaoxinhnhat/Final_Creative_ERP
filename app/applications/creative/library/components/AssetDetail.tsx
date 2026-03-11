@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { X, Download, ExternalLink, Edit, Trash2, Eye, Link2, Clock, User, Youtube, Gamepad2, Loader2, Check, RefreshCw, Copy, Unlink, Save, Plus } from "lucide-react"
-import { format } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
+import { vi } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 import type { Asset, UATestStatus, AdNetwork, DeploymentStatus, PerformanceRating, AssetCategory, CreativeTeam, WorkflowStage } from "../types"
 import {
   CATEGORY_CONFIG,
@@ -37,6 +39,7 @@ interface AssetDetailProps {
   onUpdateLiveNetworks?: (networks: AdNetwork[]) => void
   onUpdateDriveInfo?: (driveUrl: string) => Promise<boolean>
   onRemoveDriveLink?: () => void
+  onRefreshAsset?: () => Promise<{ asset: Asset; updatedFields: string[] } | null>
   onUpdateAsset?: (assetId: string, updates: Partial<Asset>) => Promise<boolean>
   isUpdatingDrive?: boolean
   userRole?: 'ua_team' | 'creative_team' | 'admin'
@@ -62,10 +65,12 @@ export function AssetDetail({
   onUpdateLiveNetworks,
   onUpdateDriveInfo,
   onRemoveDriveLink,
+  onRefreshAsset,
   onUpdateAsset,
   isUpdatingDrive = false,
   userRole = 'creative_team',
 }: AssetDetailProps) {
+  const { toast } = useToast()
   const [isEditingDrive, setIsEditingDrive] = useState(false)
   const [driveUrlInput, setDriveUrlInput] = useState("")
   const [driveError, setDriveError] = useState<string | null>(null)
@@ -75,6 +80,9 @@ export function AssetDetail({
   // Edit Mode State
   const [isEditMode, setIsEditMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Sync State
+  const [isSyncing, setIsSyncing] = useState(false)
 
   // Form Data State
   const [formData, setFormData] = useState<Partial<Asset>>({})
@@ -142,8 +150,14 @@ export function AssetDetail({
   // Tag Handlers
   const addTag = () => {
     const trimmed = tagInput.trim()
-    if (trimmed && formData.tags && !formData.tags.includes(trimmed)) {
+    if (!trimmed) return
+
+    const currentTags = formData.tags || []
+    if (!currentTags.includes(trimmed)) {
       setFormData(prev => ({ ...prev, tags: [...(prev.tags || []), trimmed] }))
+      setTagInput("")
+    } else {
+      // Clear input even if tag already exists to allow user to try again
       setTagInput("")
     }
   }
@@ -165,11 +179,13 @@ export function AssetDetail({
   // Theme Handlers
   const addTheme = () => {
     const trimmed = themeInput.trim()
-    if (trimmed && formData.themes && !formData.themes.includes(trimmed)) {
+    if (!trimmed) return
+
+    const currentThemes = formData.themes || []
+    if (!currentThemes.includes(trimmed)) {
       setFormData(prev => ({ ...prev, themes: [...(prev.themes || []), trimmed] }))
       setThemeInput("")
-    } else if (trimmed && !formData.themes) {
-      setFormData(prev => ({ ...prev, themes: [trimmed] }))
+    } else {
       setThemeInput("")
     }
   }
@@ -189,6 +205,53 @@ export function AssetDetail({
   }
 
   if (!asset) return null
+
+  // Sync handler with full error handling and toast feedback
+  const handleSync = async () => {
+    if (!onRefreshAsset || isSyncing) return
+
+    setIsSyncing(true)
+    try {
+      const result = await onRefreshAsset()
+      if (result) {
+        const { updatedFields } = result
+        const description = updatedFields.length > 0
+          ? `Đã cập nhật: ${updatedFields.join(", ")}`
+          : "Không có thay đổi nào mới nhất từ hệ thống."
+
+        toast({
+          title: "✅ Thông tin đã được cập nhật",
+          description: description,
+          className: "bg-green-50 border-green-200"
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Đồng bộ thất bại",
+          description: "Không thể lấy thông tin mới nhất từ hệ thống.",
+          action: (
+            <Button variant="outline" size="sm" className="text-xs" onClick={handleSync}>
+              Thử lại
+            </Button>
+          ),
+        })
+      }
+    } catch (error) {
+      console.error("[Sync Error]", error)
+      toast({
+        variant: "destructive",
+        title: "❌ Đồng bộ thất bại",
+        description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi đồng bộ dữ liệu.",
+        action: (
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleSync}>
+            Thử lại
+          </Button>
+        ),
+      })
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const handleDriveLinkSave = async () => {
     if (!driveUrlInput.trim()) {
@@ -248,8 +311,8 @@ export function AssetDetail({
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Main 3-column layout */}
-            <div className="grid grid-cols-3 gap-6">
+            {/* Main 2-column layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Column 1: Preview + Actions */}
               <div className="space-y-3">
@@ -333,6 +396,13 @@ export function AssetDetail({
                       <Download className="h-3 w-3" /> {asset.downloads}
                     </span>
                   </div>
+                  {/* Last Sync Timestamp */}
+                  {asset.lastSyncAt && (
+                    <div className="flex items-center gap-2" title={format(new Date(asset.lastSyncAt), "HH:mm dd/MM/yyyy")}>
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Đồng bộ: {formatDistanceToNow(new Date(asset.lastSyncAt), { addSuffix: true, locale: vi })}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -647,23 +717,7 @@ export function AssetDetail({
                           </Button>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs flex-1 h-7"
-                          onClick={() => onUpdateDriveInfo && asset.driveUrl && onUpdateDriveInfo(asset.driveUrl)}
-                          disabled={isUpdatingDrive}
-                        >
-                          {isUpdatingDrive ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                          Cập nhật
-                        </Button>
-                        {onRemoveDriveLink && (
-                          <Button variant="outline" size="sm" className="text-xs text-red-600 h-7 px-2" onClick={handleRemoveDriveLink} disabled={isUpdatingDrive}>
-                            <Unlink className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
+
                     </div>
                   )}
 
@@ -750,33 +804,9 @@ export function AssetDetail({
                   </div>
                 )}
               </div>
-
-              {/* Column 3: UA Testing Panel - Only for UA Team */}
-              <div className="space-y-3">
-                {userRole === 'ua_team' && onUpdateUAStatus && onSetNetworkStatus && onUpdateDeployment && onUpdateLiveNetworks && (
-                  <UATestingPanel
-                    asset={asset}
-                    onUpdateUAStatus={onUpdateUAStatus}
-                    onSetNetworkStatus={onSetNetworkStatus}
-                    onUpdateDeployment={onUpdateDeployment}
-                    onUpdateLiveNetworks={onUpdateLiveNetworks}
-                    userRole={userRole}
-                  />
-                )}
-                {userRole !== 'ua_team' && (
-                  <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                    <div className="text-center text-muted-foreground">
-                      <div className="text-2xl mb-2">🔒</div>
-                      <p className="text-sm font-medium">UA Testing Panel</p>
-                      <p className="text-xs mt-1">Chỉ UA Team mới có quyền truy cập</p>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
-
         {/* Footer Actions */}
         <div className="px-6 py-3 border-t flex gap-2 flex-shrink-0 bg-gray-50 dark:bg-gray-900">
           {isEditMode ? (
@@ -791,6 +821,20 @@ export function AssetDetail({
             </>
           ) : (
             <>
+              {onRefreshAsset && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  aria-label="Đồng bộ dữ liệu"
+                  title="Tải lại dữ liệu mới nhất từ hệ thống"
+                >
+                  {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  {isSyncing ? "Đang đồng bộ..." : "Đồng Bộ"}
+                </Button>
+              )}
               <Button variant="outline" size="sm" className="flex-1" onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -807,7 +851,7 @@ export function AssetDetail({
           )}
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }
 

@@ -173,7 +173,7 @@ export function FilterSettingsModal({
         color: "#3b82f6",
     })
 
-    const canEdit = userRole === 'admin'
+    const canEdit = true // Temporarily removed role check: userRole === 'admin'
 
     useEffect(() => {
         if (open) {

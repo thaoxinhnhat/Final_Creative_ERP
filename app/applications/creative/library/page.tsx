@@ -17,9 +17,7 @@ import {
   Clock,
   ChevronDown,
   HardDrive,
-  FileArchive,
   GripVertical,
-  UserCog,
   Settings
 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -35,6 +33,7 @@ import type { Asset, AssetFilters, Brief, WorkflowStage, AssetType } from "./typ
 import { useAssets } from "./hooks"
 import { FilterPanel } from "./components/FilterPanel"
 import { AssetGrid } from "./components/AssetGrid"
+import { BriefCarousel } from "./components/BriefCarousel"
 import { AssetDetail } from "./components/AssetDetail"
 import { UploadModal } from "./components/UploadModal"
 import { KanbanBoard } from "./components/KanbanBoard"
@@ -71,6 +70,9 @@ export default function CreativeLibraryPage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [librarySettingsOpen, setLibrarySettingsOpen] = useState(false)
 
+  // Tabs and State
+  const [activeTab, setActiveTab] = useState<'brief' | 'asset'>('asset')
+
   // Resizable panel widths
   const [filterWidth, setFilterWidth] = useState(FILTER_DEFAULT_WIDTH)
   const [detailWidth, setDetailWidth] = useState(DETAIL_DEFAULT_WIDTH)
@@ -98,7 +100,6 @@ export default function CreativeLibraryPage() {
     toggleCategoryFilter,
     toggleWorkflowFilter,
     toggleNetworkFilter,
-    toggleBriefsOnly,
     uploadAssets,
     deleteAsset,
     incrementViews,
@@ -112,6 +113,7 @@ export default function CreativeLibraryPage() {
     performanceStats,
     updateDeploymentStatus,
     updateLiveNetworks,
+    refreshAssetFromERP,
     updateDriveInfo,
     removeDriveLink,
     updateAsset,
@@ -266,35 +268,6 @@ export default function CreativeLibraryPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Role Selector for Testing */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className={cn(
-                  "gap-2",
-                  userRole === 'admin' ? "border-red-500 text-red-700" :
-                    userRole === 'ua_team' ? "border-purple-500 text-purple-700" :
-                      "border-orange-500 text-orange-700"
-                )}>
-                  <UserCog className="h-4 w-4" />
-                  {userRole === 'admin' ? 'Admin' : userRole === 'ua_team' ? 'UA Team' : 'Creative Team'}
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setUserRole('creative_team')} className="gap-2">
-                  🎨 Creative Team
-                  {userRole === 'creative_team' && <Badge className="ml-auto text-xs">Active</Badge>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUserRole('ua_team')} className="gap-2">
-                  📊 UA Team
-                  {userRole === 'ua_team' && <Badge className="ml-auto text-xs">Active</Badge>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUserRole('admin')} className="gap-2">
-                  🔧 Admin
-                  {userRole === 'admin' && <Badge className="ml-auto text-xs">Active</Badge>}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             <Button variant="outline" onClick={() => setLibrarySettingsOpen(true)}>
               <Settings className="h-4 w-4 mr-2" />
@@ -330,9 +303,6 @@ export default function CreativeLibraryPage() {
                 filterSettings={librarySettings.filters}
                 onSaveFilterSettings={saveFilterSettings}
                 userRole={userRole}
-                showBriefsOnly={filters.showBriefsOnly}
-                onToggleBriefsOnly={toggleBriefsOnly}
-                briefCount={briefs.length}
               />
             </div>
             {/* Resize Handle */}
@@ -349,40 +319,76 @@ export default function CreativeLibraryPage() {
         )}
 
         {/* Center: Main View */}
-        <div className="flex-1 overflow-hidden">
-          {viewMode === 'grid' || viewMode === 'list' ? (
-            <AssetGrid
-              assets={assets}
-              briefs={briefs}
-              viewMode={viewMode}
-              isLoading={isLoading}
-              selectedId={selectedAsset?.id || null}
-              onSelectAsset={handleSelectAsset}
-              onDownload={handleDownload}
-              onClickBrief={handleClickBrief}
-              showBriefsOnly={filters.showBriefsOnly || false}
-              onToggleBriefsOnly={toggleBriefsOnly}
-              sortBy={filters.sortBy}
-              onSortChange={(sortBy: AssetFilters['sortBy']) => updateFilters({ sortBy })}
-            />
-          ) : viewMode === 'kanban' ? (
-            <div className="h-full overflow-auto p-4">
-              <KanbanBoard
-                assetsByWorkflow={assetsByWorkflow}
-                onMoveAsset={handleMoveAsset}
-                onSelectAsset={handleSelectAsset}
-                selectedId={selectedAsset?.id}
-              />
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Tabs Header */}
+          <div className="px-6 pt-4 border-b dark:border-gray-200 dark:border-gray-800 shrink-0">
+            <div className="flex space-x-6">
+              <button
+                onClick={() => setActiveTab('asset')}
+                className={cn(
+                  "pb-3 text-sm font-medium transition-colors border-b-2",
+                  activeTab === 'asset'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Asset
+              </button>
+              <button
+                onClick={() => setActiveTab('brief')}
+                className={cn(
+                  "pb-3 text-sm font-medium transition-colors border-b-2",
+                  activeTab === 'brief'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Brief
+              </button>
             </div>
-          ) : viewMode === 'timeline' ? (
-            <div className="h-full overflow-auto">
-              <TimelineView
-                assets={assets}
-                onSelectAsset={handleSelectAsset}
-                selectedId={selectedAsset?.id}
-              />
-            </div>
-          ) : null}
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'brief' ? (
+              <div className="h-full overflow-y-auto">
+                <BriefCarousel
+                  briefs={briefs}
+                  onClickBrief={handleClickBrief}
+                />
+              </div>
+            ) : (
+              viewMode === 'grid' || viewMode === 'list' ? (
+                <AssetGrid
+                  assets={assets}
+                  briefs={[]}
+                  viewMode={viewMode}
+                  isLoading={isLoading}
+                  selectedId={selectedAsset?.id || null}
+                  onSelectAsset={handleSelectAsset}
+                  onDownload={handleDownload}
+                  sortBy={filters.sortBy}
+                  onSortChange={(sortBy: AssetFilters['sortBy']) => updateFilters({ sortBy })}
+                />
+              ) : viewMode === 'kanban' ? (
+                <div className="h-full overflow-auto p-4">
+                  <KanbanBoard
+                    assetsByWorkflow={assetsByWorkflow}
+                    onMoveAsset={handleMoveAsset}
+                    onSelectAsset={handleSelectAsset}
+                    selectedId={selectedAsset?.id}
+                  />
+                </div>
+              ) : viewMode === 'timeline' ? (
+                <div className="h-full overflow-auto">
+                  <TimelineView
+                    assets={assets}
+                    onSelectAsset={handleSelectAsset}
+                    selectedId={selectedAsset?.id}
+                  />
+                </div>
+              ) : null
+            )}
+          </div>
         </div>
 
         {/* Right: Asset Detail removed - now using popup */}
@@ -412,6 +418,7 @@ export default function CreativeLibraryPage() {
         onUpdateLiveNetworks={(networks) => selectedAsset && updateLiveNetworks(selectedAsset.id, networks)}
         onUpdateDriveInfo={(driveUrl) => selectedAsset ? updateDriveInfo(selectedAsset.id, driveUrl) : Promise.resolve(false)}
         onRemoveDriveLink={() => selectedAsset && removeDriveLink(selectedAsset.id)}
+        onRefreshAsset={() => selectedAsset ? refreshAssetFromERP(selectedAsset.id) : Promise.resolve(null)}
         onUpdateAsset={updateAsset}
         isUpdatingDrive={isLoading}
         userRole={userRole}

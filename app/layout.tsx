@@ -4,13 +4,14 @@ import { Inter } from 'next/font/google'
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { NotificationCenter } from "@/components/notification-center"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Workspace Dashboard",
   description: "Internal workspace dashboard for startup employees",
-    generator: 'v0.app'
+  generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -26,6 +27,7 @@ export default function RootLayout({
             <NotificationCenter />
           </div>
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

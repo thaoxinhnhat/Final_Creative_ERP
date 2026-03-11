@@ -252,6 +252,11 @@ export interface Asset {
   finalizedByTeam?: string
 
   liveAt?: string
+
+  // ============================================
+  // NEW: Sync Tracking
+  // ============================================
+  lastSyncAt?: string
 }
 
 // ============================================

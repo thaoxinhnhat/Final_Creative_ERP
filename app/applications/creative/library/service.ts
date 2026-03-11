@@ -488,6 +488,43 @@ export const assetService = {
         return [...mockBriefs].sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
+    },
+
+    async refreshAssetFromERP(id: string): Promise<{ asset: Asset; updatedFields: string[] } | null> {
+        await new Promise(resolve => setTimeout(resolve, 800)) // Fake latency
+
+        const assetIndex = assetsDB.findIndex(a => a.id === id) // Changed _mockAssets to assetsDB
+        if (assetIndex === -1) return null
+
+        const asset = assetsDB[assetIndex] // Changed _mockAssets to assetsDB
+        const updatedFields: string[] = []
+        const changes: Partial<Asset> = { lastSyncAt: new Date().toISOString() }
+
+        // Simulate some random changes for demonstration purposes
+        const random = Math.random()
+        if (random > 0.6) {
+            changes.views = asset.views + Math.floor(Math.random() * 50) + 1
+            updatedFields.push("Lượt xem")
+        }
+        if (random > 0.8) {
+            changes.downloads = asset.downloads + Math.floor(Math.random() * 10) + 1
+            updatedFields.push("Lượt tải")
+        }
+        if (random > 0.9 && asset.workflowStage !== 'stopped') {
+            const nextStageMap: Record<string, WorkflowStage> = {
+                'final': 'live',
+                'live': 'stopped'
+            }
+            if (nextStageMap[asset.workflowStage]) {
+                changes.workflowStage = nextStageMap[asset.workflowStage]
+                updatedFields.push("Trạng thái Workflow")
+            }
+        }
+
+        const newAsset = { ...asset, ...changes }
+        assetsDB[assetIndex] = newAsset // Changed _mockAssets to assetsDB
+
+        return { asset: newAsset, updatedFields }
     }
 
 }

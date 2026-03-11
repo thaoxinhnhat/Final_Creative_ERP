@@ -103,13 +103,6 @@ export function useAssets() {
     }))
   }, [])
 
-  const toggleBriefsOnly = useCallback(() => {
-    setFilters(prev => ({
-      ...prev,
-      showBriefsOnly: !prev.showBriefsOnly
-    }))
-  }, [])
-
   // ============================================
   // ASSET CRUD OPERATIONS
   // ============================================
@@ -209,6 +202,22 @@ export function useAssets() {
   }, [fetchAssets])
 
   // ============================================
+  // Refresh Asset from ERP
+  // ============================================
+  const refreshAssetFromERP = useCallback(async (id: string): Promise<{ asset: Asset; updatedFields: string[] } | null> => {
+    try {
+      const result = await assetService.refreshAssetFromERP(id)
+      if (result) {
+        setAssets(prev => prev.map(a => a.id === id ? result.asset : a))
+      }
+      return result
+    } catch (err) {
+      console.error("Failed to refresh asset from ERP:", err)
+      return null
+    }
+  }, [])
+
+  // ============================================
   // STATS - Calculated from current filtered view or full set?
   // Service.getAssets filters data, so `assets` is filtered.
   // Grouping should happen on `assets`.
@@ -272,7 +281,6 @@ export function useAssets() {
     if (filters.performanceRatings && filters.performanceRatings.length > 0) count++
     if (filters.deploymentStatuses && filters.deploymentStatuses.length > 0) count++
     if (filters.hasTestPlan !== undefined) count++
-    if (filters.showBriefsOnly) count++
     // Workflow filter is default so maybe don't count if it matches default? 
     // Old logic likely counted it if it was different from default or just counted sections.
     // Let's count it if it's not the default ['final', 'live']? Or just count if active.
@@ -298,7 +306,6 @@ export function useAssets() {
     toggleCategoryFilter,
     toggleWorkflowFilter,
     toggleNetworkFilter,
-    toggleBriefsOnly, // Added toggleBriefsOnly export
     uploadAssets,
     importFromDrive,
     deleteAsset,
@@ -314,5 +321,6 @@ export function useAssets() {
     updateLiveNetworks,
     assetsByWorkflow,
     performanceStats,
+    refreshAssetFromERP,
   }
 }

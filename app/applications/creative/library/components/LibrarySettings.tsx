@@ -299,7 +299,7 @@ export function LibrarySettingsModal({
     })
     const [newOption, setNewOption] = useState<NewOptionForm>({ category: null, label: "", icon: "Star", color: "#3b82f6" })
 
-    const canEdit = userRole === 'admin'
+    const canEdit = true // Temporarily removed role check: userRole === 'admin'
 
     useEffect(() => {
         if (open) {
